@@ -150,6 +150,51 @@
   .rack-item .rw{ margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-faint); }
   .rack-item.type-ups{ background:var(--copper-soft); border-color:var(--copper); }
   .rack-item.type-patchpanel, .rack-item.type-cablebar{ background:var(--teal-soft); border-color:var(--teal); }
+  .rack-item.clickable{ cursor:pointer; }
+  .rack-item.clickable:hover{ border-color:var(--teal); }
+  .rack-item .brand-tag{ font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:var(--teal); margin-left:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+  .rack-item.has-brand .rw{ margin-left:8px; }
+
+  /* product spec sheet overlay */
+  .sheet-overlay{
+    position:fixed; inset:0; background:rgba(10,14,12,.6); backdrop-filter:blur(2px);
+    display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:60; overflow-y:auto;
+  }
+  .sheet-overlay.open{ opacity:1; pointer-events:auto; }
+  .sheet-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; max-width:600px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.35); transform:translateY(10px); transition:transform .2s ease;
+    max-height:88vh; display:flex; flex-direction:column;
+  }
+  .sheet-overlay.open .sheet-card{ transform:translateY(0); }
+  .sheet-head{ display:flex; align-items:center; gap:12px; padding:18px 20px 14px; border-bottom:1px solid var(--line); }
+  .sheet-head h3{ font-family:"IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:18px; flex:1; }
+  .sheet-close{ background:none; border:none; color:var(--ink-faint); font-size:20px; cursor:pointer; line-height:1; }
+  .sheet-close:hover{ color:var(--ink); }
+  .sheet-body{ padding:16px 20px 20px; overflow-y:auto; }
+  .sheet-note{ font-size:12.5px; color:var(--ink-faint); margin-bottom:14px; line-height:1.5; }
+  .product-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:520px){ .product-grid{ grid-template-columns:1fr; } }
+  .product-card{
+    border:1.5px solid var(--line); border-radius:10px; padding:12px; background:var(--bg-raised);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .product-card.chosen{ border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-glow); }
+  .product-card img{ width:100%; height:110px; object-fit:cover; border-radius:6px; background:var(--card); border:1px solid var(--line); }
+  .product-card .pc-photo-caption{ font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:var(--ink-faint); }
+  .product-card .pc-brand{ font-size:10.5px; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; text-transform:uppercase; letter-spacing:.05em; }
+  .product-card .pc-model{ font-weight:700; font-size:14px; }
+  .product-card .pc-specs{ font-size:12px; color:var(--ink-dim); line-height:1.4; }
+  .product-card .pc-price{ font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--copper); font-weight:600; }
+  .product-card .pc-actions{ display:flex; gap:8px; margin-top:auto; padding-top:4px; }
+  .pc-link{ font-size:11.5px; color:var(--teal); text-decoration:none; font-weight:600; }
+  .pc-link:hover{ text-decoration:underline; }
+  .pc-choose{
+    font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:12px; background:var(--teal); color:var(--card);
+    border:none; border-radius:6px; padding:7px 11px; cursor:pointer; margin-left:auto;
+  }
+  .pc-choose.picked{ background:var(--ink-faint); }
 
   /* bin */
   .bin-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
@@ -258,6 +303,10 @@
   <footer class="page-foot">RACK ZERO · a guided sim — always verify wiring and breaker capacity against your own local electrical code before doing this for real</footer>
 </div>
 
+<div class="sheet-overlay" id="sheetOverlay">
+  <div class="sheet-card" id="sheetCard" role="dialog" aria-modal="true"></div>
+</div>
+
 <script>
 /* ---------------- data ---------------- */
 const RACKS = {
@@ -311,6 +360,56 @@ const DC_PARTS = {
 const DC_BOOT_ORDER = ['core_router','tor_switch','server'];
 const DC_BOOT_NAMES = {core_router:'Core Router', tor_switch:'ToR Switch', server:'Server'};
 
+/* ---- real-world product research (2 options per category) ---- */
+const WIKI = (f)=>`https://commons.wikimedia.org/wiki/Special:FilePath/${f}`;
+const PRODUCTS = {
+  patchpanel: [
+    {brand:'Tripp Lite (Eaton)', model:'N252-024', specs:'24-port Cat6, 110-punchdown, 1U, fully passive', price:'~$40', url:'https://tripplite.eaton.com/24-port-1u-rack-mount-cat6-cat5-feedthrough-patch-panel-rj45-ethernet~N254024', img:WIKI('Patch%20Panel.jpg')},
+    {brand:'Legrand', model:'Cat6 24-Port Rack Mount', specs:'24-port Cat6, exceeds TIA Cat6 spec, 1U, passive', price:'~$45', url:'https://www.legrand.us/audio-visual/data-connectivity/patch-panels/cat-6-24-port-rack-mount-patch-panel/p/24845cc6'}
+  ],
+  cablebar: [
+    {brand:'StarTech.com', model:'1U Cable Management Panel', specs:'1U, D-ring finger duct, passive', price:'~$20', url:'https://www.startech.com/'},
+    {brand:'Tripp Lite (Eaton)', model:'1U Wire Duct Panel', specs:'1U, snap-close cable channel, passive', price:'~$25', url:'https://tripplite.eaton.com/'}
+  ],
+  switch: [
+    {brand:'TP-Link', model:'TL-SG1008MP', specs:'8-port Gigabit, 153W PoE+ budget, unmanaged, rack/desktop', price:'~$110', url:'https://www.tp-link.com/us/business-networking/unmanaged-switch/tl-sg1008mp/', img:WIKI('Network%20switches.jpg')},
+    {brand:'NETGEAR', model:'GS108PP (ProSAFE FlexPoE)', specs:'8-port Gigabit, 123W PoE+ budget, unmanaged', price:'~$150', url:'https://www.netgear.com/business/wired/switches/'}
+  ],
+  router: [
+    {brand:'Ubiquiti', model:'UniFi Dream Machine Pro', specs:'1U, gateway + 8-port switch + 10G SFP+, ~50W typical', price:'~$380', url:'https://store.ui.com/us/en/products/udm-pro'},
+    {brand:'Protectli', model:'Vault Pro VP2670', specs:'Fanless firewall appliance, rack-mountable, ~15-25W', price:'~$550', url:'https://protectli.com/'}
+  ],
+  nas: [
+    {brand:'Synology', model:'RackStation RS422+', specs:'4-bay 1U NAS, AMD Ryzen R1600, 100W PSU', price:'~$750 diskless', url:'https://www.synology.com/en-us/products/RS422+'},
+    {brand:'QNAP', model:'TS-435XeU', specs:'4-bay 1U rackmount NAS, quad-core ARM, ~60W', price:'~$600 diskless', url:'https://www.qnap.com/'}
+  ],
+  tor_switch: [
+    {brand:'Ubiquiti', model:'UniFi Switch Pro 48 PoE (Gen2)', specs:'48-port Gigabit, Layer 3, 600W PoE budget, 4x 10G SFP+', price:'~$999', url:'https://store.ui.com/us/en/products/usw-pro-48-poe', img:WIKI('19-inch%20rackmount%20Ethernet%20switches%20and%20patch%20panels.jpg')},
+    {brand:'Cisco', model:'Catalyst 9200L-48P', specs:'48-port Gigabit PoE+, Layer 3, stackable', price:'~$3,500', url:'https://www.cisco.com/'}
+  ],
+  core_router: [
+    {brand:'Fortinet', model:'FortiGate 100F', specs:'Enterprise NGFW appliance, 1U, ~45W typical', price:'~$2,500', url:'https://www.fortinet.com/'},
+    {brand:'Cisco', model:'ISR 4331', specs:'Integrated services router, 1U, ~55W typical', price:'~$3,000', url:'https://www.cisco.com/'}
+  ],
+  server: [
+    {brand:'Dell', model:'PowerEdge R750', specs:'2U, dual-socket Xeon Scalable, ~120-400W typical (varies a lot by config)', price:'~$8,000+ configured', url:'https://www.delltechnologies.com/asset/en-us/products/servers/technical-support/dell-emc-poweredge-r750-spec-sheet.pdf', img:WIKI('Servers%20in%20a%20Rack.jpg')},
+    {brand:'HPE', model:'ProLiant DL380 Gen11', specs:'2U, dual-socket Xeon Scalable, ~150-450W typical (varies a lot by config)', price:'~$7,500+ configured', url:'https://www.hpe.com/us/en/proliant-dl380.html'}
+  ],
+  ups_compact: [
+    {brand:'APC', model:'Back-UPS BX600', specs:'600VA/330W, tower, 6 outlets', price:'~$70', url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'CP685AVR', specs:'685VA/390W, tower, 8 outlets, AVR', price:'~$65', url:'https://www.cyberpower.com/', img:WIKI('CyberPower%20UPS%20Systems.jpg')}
+  ],
+  ups_standard: [
+    {brand:'APC', model:'Smart-UPS SMC1500-2U', specs:'1500VA/900W, 2U rackmount, pure sine wave', price:'~$550', url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'OR1500PFCRT2U', specs:'1500VA/900W, 2U rackmount, PFC sine wave', price:'~$400', url:'https://www.cyberpower.com/', img:WIKI('CyberPower%20UPS%20Systems.jpg')}
+  ],
+  ups_large: [
+    {brand:'APC', model:'Smart-UPS SMT3000RM2U', specs:'3000VA/2700W, 2U rackmount, pure sine wave', price:'~$1,400', url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'OL3000RMXL2U', specs:'3000VA/2700W, 2U online double-conversion', price:'~$1,300', url:'https://www.cyberpower.com/'}
+  ]
+};
+function productsKeyFor(partKey){ return partKey==='ups' ? 'ups_'+state.ups.key : partKey; }
+
 const PHASES_HOME = ['intro','chooseTier','chooseRack','chooseCircuit','chooseUPS','introGear','placement','wiring','cabling','bootSequence','complete'];
 const PHASES_DC   = ['intro','chooseTier','chooseDCTier','chooseRack','chooseCircuit','choosePDU','introGear','placement','wiring','cabling','bootSequence','complete'];
 function currentPhases(){ return state.buildType==='dc' ? PHASES_DC : PHASES_HOME; }
@@ -326,7 +425,8 @@ function freshState(){
     binKeys:[], selectedBin:null,
     wireUpsConnected:false, wiredDevices:[], wiredFeeds:{},
     cableCount:0, uplinkDone:false,
-    bootNext:0
+    bootNext:0,
+    chosenProducts:{}
   };
 }
 
@@ -353,6 +453,7 @@ if(!activeId || !profiles[activeId]){
   saveProfiles(); setActiveId(activeId);
 }
 let state = profiles[activeId].state;
+if(!state.chosenProducts) state.chosenProducts = {};
 let resetArmed = false, resetTimer = null, dropdownOpen = false;
 
 function persist(){
@@ -393,7 +494,7 @@ function renderProfileBar(){
   };
   bar.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
     activeId = b.getAttribute('data-pick'); setActiveId(activeId);
-    state = profiles[activeId].state; dropdownOpen = false; render();
+    state = profiles[activeId].state; if(!state.chosenProducts) state.chosenProducts = {}; dropdownOpen = false; render();
   });
   bar.querySelectorAll('[data-del]').forEach(b=>b.onclick=(e)=>{
     e.stopPropagation();
@@ -800,10 +901,13 @@ function renderRack(){
         ? (part.watts>0 && isFullyWired(key))
         : (key!=='ups' && key!=='patchpanel' && key!=='cablebar' && state.wiredDevices.includes(key));
       const typeClass = key==='ups' ? 'type-ups' : (key==='patchpanel' ? 'type-patchpanel' : (key==='cablebar' ? 'type-cablebar' : ''));
+      const hasProducts = !!PRODUCTS[productsKeyFor(key)];
+      const chosenIdx = state.chosenProducts[key];
+      const brandTag = (hasProducts && chosenIdx!==undefined) ? `<span class="brand-tag">${escapeHtml(PRODUCTS[productsKeyFor(key)][chosenIdx].brand)}</span>` : '';
       rows += `<div class="rack-slot" style="height:${34*span}px">
         <span class="rack-u-label">${uLabel}</span>
-        <div class="rack-item ${typeClass} ${powered?'on':''}">
-          <span class="led"></span><span>${name}</span><span class="rw mono">${watts}</span>
+        <div class="rack-item ${typeClass} ${powered?'on':''} ${hasProducts?'clickable':''} ${brandTag?'has-brand':''}" data-view="${key}">
+          <span class="led"></span><span>${name}</span>${brandTag}<span class="rw mono">${watts}</span>
         </div>
       </div>`;
     } else {
@@ -820,6 +924,9 @@ function renderRack(){
       const idx = parseInt(el.getAttribute('data-slot'));
       moveAvatarTo(el, ()=>tryPlace(idx));
     };
+  });
+  frame.querySelectorAll('.rack-item.clickable').forEach(el=>{
+    el.onclick = ()=>openProductSheet(el.getAttribute('data-view'));
   });
 }
 function partSpan(key){ return getPart(key).u; }
@@ -845,11 +952,61 @@ function tryPlace(clickedIndex){
   for(let j=0;j<span;j++){ state.slots[start+j] = key; }
   state.selectedBin = null;
   render();
+  if(PRODUCTS[productsKeyFor(key)]) openProductSheet(key);
 }
 function flashNoRoom(){
   const hint = document.getElementById('binHint');
   if(hint){ hint.textContent = `Not enough clear space there — this part needs ${partSpan(state.selectedBin)}U. Try another slot.`; hint.style.color='var(--danger)'; }
 }
+
+/* ---------------- real-world product spec sheet ---------------- */
+let sheetPartKey = null;
+function openProductSheet(partKey){
+  sheetPartKey = partKey;
+  renderProductSheet();
+  document.getElementById('sheetOverlay').classList.add('open');
+}
+function closeProductSheet(){
+  document.getElementById('sheetOverlay').classList.remove('open');
+  sheetPartKey = null;
+}
+function renderProductSheet(){
+  if(!sheetPartKey) return;
+  const partKey = sheetPartKey;
+  const pkey = productsKeyFor(partKey);
+  const options = PRODUCTS[pkey];
+  if(!options) return;
+  const chosenIdx = state.chosenProducts[partKey];
+  const part = getPart(partKey);
+  const cards = options.map((p,i)=>{
+    const picked = chosenIdx===i;
+    return `<div class="product-card ${picked?'chosen':''}">
+      ${p.img?`<img src="${p.img}" alt="${p.brand} ${p.model}" loading="lazy"><div class="pc-photo-caption">Representative photo, not the exact model</div>`:''}
+      <div class="pc-brand">${escapeHtml(p.brand)}</div>
+      <div class="pc-model">${escapeHtml(p.model)}</div>
+      <div class="pc-specs">${escapeHtml(p.specs)}</div>
+      <div class="pc-price">${escapeHtml(p.price)}</div>
+      <div class="pc-actions">
+        <a class="pc-link" href="${p.url}" target="_blank" rel="noopener noreferrer">Product page ↗</a>
+        <button class="pc-choose ${picked?'picked':''}" data-choose="${i}">${picked?'Chosen ✓':'Choose this'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('sheetCard').innerHTML = `
+    <div class="sheet-head">
+      <h3>${part.name} — real equipment</h3>
+      <button class="sheet-close" id="sheetCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <p class="sheet-note">Two real, current products in this category, so you can see roughly what one actually looks like and what it costs. This trail's power-budget math keeps using its simplified ${part.watts>0?part.watts+'W':'0W'} teaching figure — always check the real nameplate rating on whatever you actually buy.</p>
+      <div class="product-grid">${cards}</div>
+    </div>`;
+  document.getElementById('sheetCloseBtn').onclick = closeProductSheet;
+  document.getElementById('sheetCard').querySelectorAll('[data-choose]').forEach(b=>{
+    b.onclick = ()=>{ state.chosenProducts[partKey] = parseInt(b.getAttribute('data-choose')); persist(); renderProductSheet(); renderRack(); };
+  });
+}
+document.getElementById('sheetOverlay').addEventListener('click', (e)=>{ if(e.target.id==='sheetOverlay') closeProductSheet(); });
 
 /* ---------------- bin ---------------- */
 function renderBin(){
