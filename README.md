@@ -29,3 +29,4 @@ Open `index.html` directly in a browser, or serve it with GitHub Pages.
 ## Disclaimer
 
 This is a teaching simulation, not electrical advice. Always verify wiring and breaker capacity against your own local electrical code before doing this for real.
+
