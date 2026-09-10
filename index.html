@@ -181,8 +181,8 @@
     display:flex; flex-direction:column; gap:8px;
   }
   .product-card.chosen{ border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-glow); }
-  .product-card img{ width:100%; height:110px; object-fit:cover; border-radius:6px; background:var(--card); border:1px solid var(--line); }
-  .product-card .pc-photo-caption{ font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:var(--ink-faint); }
+  .sheet-diagram{ margin-bottom:6px; }
+  .sheet-diagram-caption{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-faint); margin:0 0 14px; }
   .product-card .pc-brand{ font-size:10.5px; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; text-transform:uppercase; letter-spacing:.05em; }
   .product-card .pc-model{ font-weight:700; font-size:14px; }
   .product-card .pc-specs{ font-size:12px; color:var(--ink-dim); line-height:1.4; }
@@ -254,6 +254,22 @@
   .summary-list{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:5px; }
   .summary-list li{ font-size:13.5px; display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding-bottom:5px; }
 
+  /* shopping list */
+  .shop-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .shop-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line); }
+  .shop-row:last-of-type{ border-bottom:none; }
+  .shop-row .sr-name{ flex:1; min-width:0; }
+  .shop-row .sr-part{ font-size:11px; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; }
+  .shop-row .sr-brand{ font-size:13.5px; font-weight:600; }
+  .shop-row .sr-link{ font-size:11px; color:var(--teal); text-decoration:none; }
+  .shop-row .sr-link:hover{ text-decoration:underline; }
+  .shop-row .sr-price{ font-family:"IBM Plex Mono",monospace; font-size:13.5px; font-weight:600; color:var(--copper); white-space:nowrap; }
+  .shop-empty{ font-size:13px; color:var(--ink-faint); padding:6px 0; }
+  .shop-total{ display:flex; justify-content:space-between; align-items:baseline; margin-top:12px; padding-top:12px; border-top:2px solid var(--line); }
+  .shop-total .st-label{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
+  .shop-total .st-value{ font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:700; color:var(--copper); }
+  .shop-note{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); margin-top:8px; }
+
   footer.page-foot{ text-align:center; padding:30px 0 10px; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.03em; }
 </style>
 
@@ -285,6 +301,10 @@
     <div class="section-title">Parts Bin</div>
     <p class="bin-hint" id="binHint"></p>
     <div class="bin-grid" id="binGrid"></div>
+  </section>
+  <section class="shop-section" id="shopSection" hidden>
+    <div class="section-title">Shopping List</div>
+    <div class="shop-card" id="shopCard"></div>
   </section>
   <section class="wiring-section" id="wiringSection" hidden>
     <div class="section-title">Power Wiring</div>
@@ -361,54 +381,87 @@ const DC_BOOT_ORDER = ['core_router','tor_switch','server'];
 const DC_BOOT_NAMES = {core_router:'Core Router', tor_switch:'ToR Switch', server:'Server'};
 
 /* ---- real-world product research (2 options per category) ---- */
-const WIKI = (f)=>`https://commons.wikimedia.org/wiki/Special:FilePath/${f}`;
 const PRODUCTS = {
   patchpanel: [
-    {brand:'Tripp Lite (Eaton)', model:'N252-024', specs:'24-port Cat6, 110-punchdown, 1U, fully passive', price:'~$40', url:'https://tripplite.eaton.com/24-port-1u-rack-mount-cat6-cat5-feedthrough-patch-panel-rj45-ethernet~N254024', img:WIKI('Patch%20Panel.jpg')},
-    {brand:'Legrand', model:'Cat6 24-Port Rack Mount', specs:'24-port Cat6, exceeds TIA Cat6 spec, 1U, passive', price:'~$45', url:'https://www.legrand.us/audio-visual/data-connectivity/patch-panels/cat-6-24-port-rack-mount-patch-panel/p/24845cc6'}
+    {brand:'Tripp Lite (Eaton)', model:'N252-024', specs:'24-port Cat6, 110-punchdown, 1U, fully passive', price:'~$40', priceNum:40, url:'https://tripplite.eaton.com/24-port-1u-rack-mount-cat6-cat5-feedthrough-patch-panel-rj45-ethernet~N254024'},
+    {brand:'Legrand', model:'Cat6 24-Port Rack Mount', specs:'24-port Cat6, exceeds TIA Cat6 spec, 1U, passive', price:'~$45', priceNum:45, url:'https://www.legrand.us/audio-visual/data-connectivity/patch-panels/cat-6-24-port-rack-mount-patch-panel/p/24845cc6'}
   ],
   cablebar: [
-    {brand:'StarTech.com', model:'1U Cable Management Panel', specs:'1U, D-ring finger duct, passive', price:'~$20', url:'https://www.startech.com/'},
-    {brand:'Tripp Lite (Eaton)', model:'1U Wire Duct Panel', specs:'1U, snap-close cable channel, passive', price:'~$25', url:'https://tripplite.eaton.com/'}
+    {brand:'StarTech.com', model:'1U Cable Management Panel', specs:'1U, D-ring finger duct, passive', price:'~$20', priceNum:20, url:'https://www.startech.com/'},
+    {brand:'Tripp Lite (Eaton)', model:'1U Wire Duct Panel', specs:'1U, snap-close cable channel, passive', price:'~$25', priceNum:25, url:'https://tripplite.eaton.com/'}
   ],
   switch: [
-    {brand:'TP-Link', model:'TL-SG1008MP', specs:'8-port Gigabit, 153W PoE+ budget, unmanaged, rack/desktop', price:'~$110', url:'https://www.tp-link.com/us/business-networking/unmanaged-switch/tl-sg1008mp/', img:WIKI('Network%20switches.jpg')},
-    {brand:'NETGEAR', model:'GS108PP (ProSAFE FlexPoE)', specs:'8-port Gigabit, 123W PoE+ budget, unmanaged', price:'~$150', url:'https://www.netgear.com/business/wired/switches/'}
+    {brand:'TP-Link', model:'TL-SG1008MP', specs:'8-port Gigabit, 153W PoE+ budget, unmanaged, rack/desktop', price:'~$110', priceNum:110, url:'https://www.tp-link.com/us/business-networking/unmanaged-switch/tl-sg1008mp/'},
+    {brand:'NETGEAR', model:'GS108PP (ProSAFE FlexPoE)', specs:'8-port Gigabit, 123W PoE+ budget, unmanaged', price:'~$150', priceNum:150, url:'https://www.netgear.com/business/wired/switches/'}
   ],
   router: [
-    {brand:'Ubiquiti', model:'UniFi Dream Machine Pro', specs:'1U, gateway + 8-port switch + 10G SFP+, ~50W typical', price:'~$380', url:'https://store.ui.com/us/en/products/udm-pro'},
-    {brand:'Protectli', model:'Vault Pro VP2670', specs:'Fanless firewall appliance, rack-mountable, ~15-25W', price:'~$550', url:'https://protectli.com/'}
+    {brand:'Ubiquiti', model:'UniFi Dream Machine Pro', specs:'1U, gateway + 8-port switch + 10G SFP+, ~50W typical', price:'~$380', priceNum:380, url:'https://store.ui.com/us/en/products/udm-pro'},
+    {brand:'Protectli', model:'Vault Pro VP2670', specs:'Fanless firewall appliance, rack-mountable, ~15-25W', price:'~$550', priceNum:550, url:'https://protectli.com/'}
   ],
   nas: [
-    {brand:'Synology', model:'RackStation RS422+', specs:'4-bay 1U NAS, AMD Ryzen R1600, 100W PSU', price:'~$750 diskless', url:'https://www.synology.com/en-us/products/RS422+'},
-    {brand:'QNAP', model:'TS-435XeU', specs:'4-bay 1U rackmount NAS, quad-core ARM, ~60W', price:'~$600 diskless', url:'https://www.qnap.com/'}
+    {brand:'Synology', model:'RackStation RS422+', specs:'4-bay 1U NAS, AMD Ryzen R1600, 100W PSU', price:'~$750 diskless', priceNum:750, url:'https://www.synology.com/en-us/products/RS422+'},
+    {brand:'QNAP', model:'TS-435XeU', specs:'4-bay 1U rackmount NAS, quad-core ARM, ~60W', price:'~$600 diskless', priceNum:600, url:'https://www.qnap.com/'}
   ],
   tor_switch: [
-    {brand:'Ubiquiti', model:'UniFi Switch Pro 48 PoE (Gen2)', specs:'48-port Gigabit, Layer 3, 600W PoE budget, 4x 10G SFP+', price:'~$999', url:'https://store.ui.com/us/en/products/usw-pro-48-poe', img:WIKI('19-inch%20rackmount%20Ethernet%20switches%20and%20patch%20panels.jpg')},
-    {brand:'Cisco', model:'Catalyst 9200L-48P', specs:'48-port Gigabit PoE+, Layer 3, stackable', price:'~$3,500', url:'https://www.cisco.com/'}
+    {brand:'Ubiquiti', model:'UniFi Switch Pro 48 PoE (Gen2)', specs:'48-port Gigabit, Layer 3, 600W PoE budget, 4x 10G SFP+', price:'~$999', priceNum:999, url:'https://store.ui.com/us/en/products/usw-pro-48-poe'},
+    {brand:'Cisco', model:'Catalyst 9200L-48P', specs:'48-port Gigabit PoE+, Layer 3, stackable', price:'~$3,500', priceNum:3500, url:'https://www.cisco.com/'}
   ],
   core_router: [
-    {brand:'Fortinet', model:'FortiGate 100F', specs:'Enterprise NGFW appliance, 1U, ~45W typical', price:'~$2,500', url:'https://www.fortinet.com/'},
-    {brand:'Cisco', model:'ISR 4331', specs:'Integrated services router, 1U, ~55W typical', price:'~$3,000', url:'https://www.cisco.com/'}
+    {brand:'Fortinet', model:'FortiGate 100F', specs:'Enterprise NGFW appliance, 1U, ~45W typical', price:'~$2,500', priceNum:2500, url:'https://www.fortinet.com/'},
+    {brand:'Cisco', model:'ISR 4331', specs:'Integrated services router, 1U, ~55W typical', price:'~$3,000', priceNum:3000, url:'https://www.cisco.com/'}
   ],
   server: [
-    {brand:'Dell', model:'PowerEdge R750', specs:'2U, dual-socket Xeon Scalable, ~120-400W typical (varies a lot by config)', price:'~$8,000+ configured', url:'https://www.delltechnologies.com/asset/en-us/products/servers/technical-support/dell-emc-poweredge-r750-spec-sheet.pdf', img:WIKI('Servers%20in%20a%20Rack.jpg')},
-    {brand:'HPE', model:'ProLiant DL380 Gen11', specs:'2U, dual-socket Xeon Scalable, ~150-450W typical (varies a lot by config)', price:'~$7,500+ configured', url:'https://www.hpe.com/us/en/proliant-dl380.html'}
+    {brand:'Dell', model:'PowerEdge R750', specs:'2U, dual-socket Xeon Scalable, ~120-400W typical (varies a lot by config)', price:'~$8,000+ configured', priceNum:8000, url:'https://www.delltechnologies.com/asset/en-us/products/servers/technical-support/dell-emc-poweredge-r750-spec-sheet.pdf'},
+    {brand:'HPE', model:'ProLiant DL380 Gen11', specs:'2U, dual-socket Xeon Scalable, ~150-450W typical (varies a lot by config)', price:'~$7,500+ configured', priceNum:7500, url:'https://www.hpe.com/us/en/proliant-dl380.html'}
   ],
   ups_compact: [
-    {brand:'APC', model:'Back-UPS BX600', specs:'600VA/330W, tower, 6 outlets', price:'~$70', url:'https://www.apc.com/'},
-    {brand:'CyberPower', model:'CP685AVR', specs:'685VA/390W, tower, 8 outlets, AVR', price:'~$65', url:'https://www.cyberpower.com/', img:WIKI('CyberPower%20UPS%20Systems.jpg')}
+    {brand:'APC', model:'Back-UPS BX600', specs:'600VA/330W, tower, 6 outlets', price:'~$70', priceNum:70, url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'CP685AVR', specs:'685VA/390W, tower, 8 outlets, AVR', price:'~$65', priceNum:65, url:'https://www.cyberpower.com/'}
   ],
   ups_standard: [
-    {brand:'APC', model:'Smart-UPS SMC1500-2U', specs:'1500VA/900W, 2U rackmount, pure sine wave', price:'~$550', url:'https://www.apc.com/'},
-    {brand:'CyberPower', model:'OR1500PFCRT2U', specs:'1500VA/900W, 2U rackmount, PFC sine wave', price:'~$400', url:'https://www.cyberpower.com/', img:WIKI('CyberPower%20UPS%20Systems.jpg')}
+    {brand:'APC', model:'Smart-UPS SMC1500-2U', specs:'1500VA/900W, 2U rackmount, pure sine wave', price:'~$550', priceNum:550, url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'OR1500PFCRT2U', specs:'1500VA/900W, 2U rackmount, PFC sine wave', price:'~$400', priceNum:400, url:'https://www.cyberpower.com/'}
   ],
   ups_large: [
-    {brand:'APC', model:'Smart-UPS SMT3000RM2U', specs:'3000VA/2700W, 2U rackmount, pure sine wave', price:'~$1,400', url:'https://www.apc.com/'},
-    {brand:'CyberPower', model:'OL3000RMXL2U', specs:'3000VA/2700W, 2U online double-conversion', price:'~$1,300', url:'https://www.cyberpower.com/'}
+    {brand:'APC', model:'Smart-UPS SMT3000RM2U', specs:'3000VA/2700W, 2U rackmount, pure sine wave', price:'~$1,400', priceNum:1400, url:'https://www.apc.com/'},
+    {brand:'CyberPower', model:'OL3000RMXL2U', specs:'3000VA/2700W, 2U online double-conversion', price:'~$1,300', priceNum:1300, url:'https://www.cyberpower.com/'}
   ]
 };
+const DIAGRAM_TYPE = {
+  patchpanel:'ports24', cablebar:'duct', switch:'ports8', router:'vents', nas:'bays4',
+  tor_switch:'ports48', core_router:'vents', server:'bays4', ups:'battery'
+};
 function productsKeyFor(partKey){ return partKey==='ups' ? 'ups_'+state.ups.key : partKey; }
+
+function productDiagramSvg(partKey, span){
+  const w=280, h = span>=2 ? 130 : 76;
+  const type = DIAGRAM_TYPE[partKey] || 'vents';
+  let inner = '';
+  if(type==='ports24'){
+    for(let r=0;r<2;r++) for(let c=0;c<12;c++) inner += `<rect x="${16+c*21}" y="${16+r*30}" width="15" height="22" rx="2" fill="var(--card)" stroke="var(--ink-faint)" stroke-width="1.2"/>`;
+  } else if(type==='ports8'){
+    for(let c=0;c<8;c++){
+      inner += `<rect x="${18+c*32}" y="${h/2-15}" width="24" height="30" rx="2" fill="var(--card)" stroke="var(--ink-faint)" stroke-width="1.2"/>`;
+      inner += `<circle cx="${18+c*32+12}" cy="${h/2-21}" r="2.2" fill="var(--teal)"/>`;
+    }
+  } else if(type==='ports48'){
+    for(let r=0;r<4;r++) for(let c=0;c<12;c++) inner += `<rect x="${12+c*22}" y="${12+r*17}" width="16" height="12" rx="1.5" fill="var(--card)" stroke="var(--ink-faint)" stroke-width="1"/>`;
+  } else if(type==='bays4'){
+    for(let c=0;c<4;c++) inner += `<rect x="${22+c*62}" y="14" width="48" height="${h-28}" rx="3" fill="var(--card)" stroke="var(--ink-faint)" stroke-width="1.4"/>`;
+  } else if(type==='battery'){
+    inner += `<rect x="${w/2-46}" y="${h/2-18}" width="92" height="36" rx="4" fill="var(--card)" stroke="var(--copper)" stroke-width="1.6"/>`;
+    inner += `<rect x="${w/2+46}" y="${h/2-9}" width="7" height="18" fill="var(--copper)"/>`;
+    for(let i=0;i<3;i++) inner += `<rect x="${w/2-34+i*24}" y="${h/2-9}" width="16" height="18" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1"/>`;
+  } else if(type==='duct'){
+    for(let c=0;c<7;c++) inner += `<path d="M ${18+c*36} 18 q 0 ${h-40} 0 ${h-24}" stroke="var(--ink-faint)" stroke-width="2.4" fill="none"/>`;
+  } else {
+    for(let c=0;c<11;c++) inner += `<line x1="${16+c*24}" y1="14" x2="${16+c*24}" y2="${h-14}" stroke="var(--ink-faint)" stroke-width="2"/>`;
+    inner += `<circle cx="${w-26}" cy="${h/2}" r="4.5" fill="var(--teal)"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${span>=2?120:76}" preserveAspectRatio="xMidYMid meet">
+    <rect x="2" y="2" width="${w-4}" height="${h-4}" rx="6" fill="var(--bg-raised)" stroke="var(--line)" stroke-width="2"/>${inner}
+  </svg>`;
+}
 
 const PHASES_HOME = ['intro','chooseTier','chooseRack','chooseCircuit','chooseUPS','introGear','placement','wiring','cabling','bootSequence','complete'];
 const PHASES_DC   = ['intro','chooseTier','chooseDCTier','chooseRack','chooseCircuit','choosePDU','introGear','placement','wiring','cabling','bootSequence','complete'];
@@ -558,11 +611,46 @@ function render(){
   renderDashboard();
   renderRack();
   renderBin();
+  renderShoppingList();
   renderWiring();
   renderCabling();
   renderBoot();
   renderSummary();
   persist();
+}
+
+/* ---------------- shopping list ---------------- */
+function renderShoppingList(){
+  const show = state.rackU>0;
+  document.getElementById('shopSection').hidden = !show;
+  if(!show) return;
+  const relevantKeys = state.binKeys.filter(k=>PRODUCTS[productsKeyFor(k)]);
+  const chosenKeys = relevantKeys.filter(k=>state.chosenProducts[k]!==undefined);
+  const card = document.getElementById('shopCard');
+  if(chosenKeys.length===0){
+    card.innerHTML = `<div class="shop-empty">Nothing picked yet — choose a real product from any part's spec sheet and it'll show up here with a running total.</div>`;
+    return;
+  }
+  let total = 0;
+  const rows = chosenKeys.map(k=>{
+    const p = PRODUCTS[productsKeyFor(k)][state.chosenProducts[k]];
+    total += p.priceNum;
+    return `<div class="shop-row">
+      <span class="sr-name">
+        <div class="sr-brand">${escapeHtml(p.brand)} ${escapeHtml(p.model)}</div>
+        <div class="sr-part">${escapeHtml(getPart(k).name)} · <a class="sr-link" href="${p.url}" target="_blank" rel="noopener noreferrer">product page ↗</a></div>
+      </span>
+      <span class="sr-price">${escapeHtml(p.price)}</span>
+    </div>`;
+  }).join('');
+  const remaining = relevantKeys.length - chosenKeys.length;
+  card.innerHTML = `${rows}
+    <div class="shop-total"><span class="st-label">Estimated total</span><span class="st-value">$${total.toLocaleString()}</span></div>
+    ${remaining>0?`<div class="shop-note">${remaining} more part${remaining===1?'':'s'} still using placeholder pricing — click it to choose a real product.</div>`:''}`;
+}
+function shoppingTotal(){
+  const chosenKeys = state.binKeys.filter(k=>PRODUCTS[productsKeyFor(k)] && state.chosenProducts[k]!==undefined);
+  return chosenKeys.reduce((sum,k)=>sum+PRODUCTS[productsKeyFor(k)][state.chosenProducts[k]].priceNum, 0);
 }
 
 /* ---------------- guide box ---------------- */
@@ -978,10 +1066,10 @@ function renderProductSheet(){
   if(!options) return;
   const chosenIdx = state.chosenProducts[partKey];
   const part = getPart(partKey);
+  const diagramKey = partKey==='ups' ? 'ups' : partKey;
   const cards = options.map((p,i)=>{
     const picked = chosenIdx===i;
     return `<div class="product-card ${picked?'chosen':''}">
-      ${p.img?`<img src="${p.img}" alt="${p.brand} ${p.model}" loading="lazy"><div class="pc-photo-caption">Representative photo, not the exact model</div>`:''}
       <div class="pc-brand">${escapeHtml(p.brand)}</div>
       <div class="pc-model">${escapeHtml(p.model)}</div>
       <div class="pc-specs">${escapeHtml(p.specs)}</div>
@@ -998,12 +1086,14 @@ function renderProductSheet(){
       <button class="sheet-close" id="sheetCloseBtn" aria-label="Close">&times;</button>
     </div>
     <div class="sheet-body">
-      <p class="sheet-note">Two real, current products in this category, so you can see roughly what one actually looks like and what it costs. This trail's power-budget math keeps using its simplified ${part.watts>0?part.watts+'W':'0W'} teaching figure — always check the real nameplate rating on whatever you actually buy.</p>
+      <div class="sheet-diagram">${productDiagramSvg(diagramKey, part.u)}</div>
+      <p class="sheet-diagram-caption">Illustrative diagram, not a photo of any specific model — port/bay counts are schematic.</p>
+      <p class="sheet-note">Two real, current products in this category, so you can see what one actually costs and where to buy it. This trail's power-budget math keeps using its simplified ${part.watts>0?part.watts+'W':'0W'} teaching figure — always check the real nameplate rating on whatever you actually buy.</p>
       <div class="product-grid">${cards}</div>
     </div>`;
   document.getElementById('sheetCloseBtn').onclick = closeProductSheet;
   document.getElementById('sheetCard').querySelectorAll('[data-choose]').forEach(b=>{
-    b.onclick = ()=>{ state.chosenProducts[partKey] = parseInt(b.getAttribute('data-choose')); persist(); renderProductSheet(); renderRack(); };
+    b.onclick = ()=>{ state.chosenProducts[partKey] = parseInt(b.getAttribute('data-choose')); persist(); renderProductSheet(); renderRack(); renderShoppingList(); };
   });
 }
 document.getElementById('sheetOverlay').addEventListener('click', (e)=>{ if(e.target.id==='sheetOverlay') closeProductSheet(); });
@@ -1162,11 +1252,15 @@ function renderSummary(){
         <div class="summary-stat"><div class="sl">Rack</div><div class="sv">${used}/${state.rackU}U used</div></div>
         <div class="summary-stat"><div class="sl">Circuit</div><div class="sv">${state.circuit.cont}W cont.</div></div>
         <div class="summary-stat"><div class="sl">UPS Load</div><div class="sv">${load}/${state.ups.watts}W</div></div>`;
+  const total = shoppingTotal();
   document.getElementById('summarySection').innerHTML = `
     <div class="summary-card">
       <div class="section-title">Build Sheet</div>
-      <div class="summary-grid">${statsHtml}</div>
+      <div class="summary-grid">${statsHtml}
+        <div class="summary-stat"><div class="sl">Est. Shopping Total</div><div class="sv">$${total.toLocaleString()}</div></div>
+      </div>
       <ul class="summary-list">${list}</ul>
+      <p class="shop-note" style="margin-top:12px">Full priced list with product links is in the Shopping List section above.</p>
     </div>`;
 }
 
