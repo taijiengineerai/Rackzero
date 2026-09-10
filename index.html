@@ -1,0 +1,1017 @@
+<title>Rack Zero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#EEF1F2; --bg-raised:#E2E7E9; --line:#C7CFD3; --card:#F7F9FA;
+    --ink:#171F26; --ink-dim:#4E5C66; --ink-faint:#8993A0;
+    --copper:#AD5F2A; --copper-soft:#E7D3BF; --copper-glow:rgba(173,95,42,.18);
+    --teal:#1E6E7D; --teal-soft:#C9E1E5; --teal-glow:rgba(30,110,125,.18);
+    --amber:#B07A1E; --amber-soft:#E7D6AC;
+    --danger:#A8402F; --danger-soft:#EAD0C8;
+    --shadow:rgba(20,28,25,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0F161C; --bg-raised:#161F27; --line:#2B3944; --card:#121B22;
+      --ink:#E8EDEF; --ink-dim:#9DAAB2; --ink-faint:#57646D;
+      --copper:#E0925A; --copper-soft:#3A2A1B; --copper-glow:rgba(224,146,90,.22);
+      --teal:#4FC3D9; --teal-soft:#123039; --teal-glow:rgba(79,195,217,.2);
+      --amber:#E7B24D; --amber-soft:#3A2E17;
+      --danger:#E2705C; --danger-soft:#3A1C17;
+      --shadow:rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F161C; --bg-raised:#161F27; --line:#2B3944; --card:#121B22;
+    --ink:#E8EDEF; --ink-dim:#9DAAB2; --ink-faint:#57646D;
+    --copper:#E0925A; --copper-soft:#3A2A1B; --copper-glow:rgba(224,146,90,.22);
+    --teal:#4FC3D9; --teal-soft:#123039; --teal-glow:rgba(79,195,217,.2);
+    --amber:#E7B24D; --amber-soft:#3A2E17;
+    --danger:#E2705C; --danger-soft:#3A1C17;
+    --shadow:rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ text-wrap:balance; margin:0; }
+  .mono{ font-family:"IBM Plex Mono",ui-monospace,monospace; }
+  .wrap{ max-width:760px; margin:0 auto; padding:30px 20px 70px; }
+
+  .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+  .eyebrow{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--copper); display:flex; align-items:center; gap:8px; }
+  .eyebrow::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--copper); box-shadow:0 0 0 3px var(--copper-glow); }
+  h1{ font-family:"IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:clamp(30px,5.4vw,46px); margin-top:6px; }
+  .sub{ color:var(--ink-dim); max-width:56ch; margin-top:8px; font-size:14.5px; line-height:1.55; }
+  .step-pill{
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); background:var(--card);
+    border:1px solid var(--line); border-radius:20px; padding:6px 13px; white-space:nowrap; margin-top:6px;
+  }
+
+  /* profile bar */
+  .profile-bar{ position:relative; display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .profile-name-input{
+    font-family:"IBM Plex Sans Condensed",sans-serif; font-weight:600; font-size:14px; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 10px; min-width:120px; max-width:220px;
+  }
+  .profile-name-input:focus{ outline:none; border-color:var(--teal); }
+  .btn-sm{ font-size:12px; padding:7px 11px; }
+  .save-indicator{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); display:flex; align-items:center; gap:5px; }
+  .save-indicator::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--teal); }
+  .profile-dropdown{
+    position:absolute; top:calc(100% + 6px); left:0; background:var(--card); border:1px solid var(--line);
+    border-radius:10px; box-shadow:0 10px 26px var(--shadow); padding:8px; min-width:240px; z-index:20;
+  }
+  .profile-row{ display:flex; align-items:center; gap:8px; padding:7px 6px; border-radius:7px; }
+  .profile-row:hover{ background:var(--bg-raised); }
+  .profile-row.active{ background:var(--teal-soft); }
+  .profile-pick{ flex:1; text-align:left; background:none; border:none; font-family:inherit; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .profile-meta{ font-size:10.5px; color:var(--ink-faint); white-space:nowrap; }
+  .profile-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:2px 4px; }
+  .profile-new{ width:100%; margin-top:4px; }
+
+  section{ margin-bottom:22px; }
+  section[hidden]{ display:none; }
+  .section-title{
+    font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-faint); margin-bottom:10px;
+  }
+
+  /* guide box */
+  .guide-box{
+    display:flex; gap:14px; background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px; box-shadow:0 4px 14px var(--shadow);
+  }
+  .nova-portrait{ flex-shrink:0; }
+  .nova-body{ flex:1; min-width:0; }
+  .nova-name{ font-family:"IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:14px; color:var(--teal); margin-bottom:4px; }
+  .nova-text{ font-size:14.5px; line-height:1.55; color:var(--ink); }
+  .nova-text .fact{ color:var(--copper); font-weight:600; }
+  .nova-note{
+    margin-top:10px; background:var(--amber-soft); border-left:3px solid var(--amber); border-radius:0 8px 8px 0;
+    padding:9px 11px; font-size:13px; line-height:1.5;
+  }
+  .guide-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:13px; }
+  .btn{
+    font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:13.5px; cursor:pointer;
+    border-radius:8px; padding:10px 16px; border:1px solid transparent; transition:transform .1s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:var(--teal); color:var(--card); }
+  .btn-choice{ background:var(--bg-raised); color:var(--ink); border-color:var(--line); text-align:left; }
+  .btn-choice:hover{ border-color:var(--teal); }
+  .btn-ghost{ background:none; border-color:var(--line); color:var(--ink-dim); }
+
+  .choice-card{ display:block; width:100%; }
+  .choice-title{ font-weight:700; font-size:13.5px; }
+  .choice-meta{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+  .choice-blurb{ font-size:12.5px; color:var(--ink-dim); margin-top:4px; line-height:1.4; }
+
+  /* dashboard */
+  .dash-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
+  .meter-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 14px; }
+  .meter-label{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
+  .meter-value{ font-family:"IBM Plex Mono",monospace; font-size:18px; font-weight:600; margin-top:4px; }
+  .meter-bar{ height:8px; border-radius:4px; background:var(--bg-raised); margin-top:9px; overflow:hidden; }
+  .meter-fill{ height:100%; border-radius:4px; background:var(--teal); transition:width .3s ease; }
+  .meter-fill.warn{ background:var(--amber); }
+  .meter-fill.danger{ background:var(--danger); }
+  .meter-sub{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); margin-top:6px; }
+
+  /* rack */
+  .rack-frame-wrap{ position:relative; max-width:360px; margin:0 auto; }
+  .rack-frame{
+    background:var(--card); border:2px solid var(--line); border-radius:10px; padding:10px;
+  }
+  .tech-avatar{
+    position:absolute; left:-32px; top:10px; width:26px; height:34px; opacity:0;
+    transition:top .4s ease, opacity .25s ease; pointer-events:none; z-index:8;
+  }
+  .tech-avatar.active{ opacity:1; }
+  @media (max-width:480px){ .tech-avatar{ left:-2px; } }
+  @keyframes techpulse{ 0%{ transform:scale(1); } 45%{ transform:scale(1.06); box-shadow:0 0 0 6px var(--teal-glow); } 100%{ transform:scale(1); box-shadow:none; } }
+  .tech-pulse{ animation:techpulse .32s ease; }
+  @media (prefers-reduced-motion: reduce){ .tech-pulse{ animation:none; } }
+  .rack-slot{
+    display:flex; align-items:center; gap:8px; height:34px; border-bottom:1px dashed var(--line);
+    position:relative; padding-left:26px;
+  }
+  .rack-slot:last-child{ border-bottom:none; }
+  .rack-u-label{ position:absolute; left:0; font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:var(--ink-faint); width:22px; text-align:right; }
+  .rack-slot.empty{ cursor:pointer; }
+  .rack-slot.empty:hover{ background:var(--teal-soft); }
+  .rack-slot.selectable{ background:var(--copper-soft); }
+  .rack-item{
+    width:100%; height:100%; border-radius:5px; display:flex; align-items:center; gap:8px; padding:0 10px;
+    background:var(--bg-raised); border:1.5px solid var(--line); font-size:12px; font-weight:600;
+  }
+  .rack-item .led{ width:7px; height:7px; border-radius:50%; background:var(--ink-faint); flex-shrink:0; }
+  .rack-item.powered .led{ background:var(--copper); box-shadow:0 0 0 2px var(--copper-glow); }
+  .rack-item.on .led{ background:var(--teal); box-shadow:0 0 0 2px var(--teal-glow); }
+  .rack-item .rw{ margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-faint); }
+  .rack-item.type-ups{ background:var(--copper-soft); border-color:var(--copper); }
+  .rack-item.type-patchpanel, .rack-item.type-cablebar{ background:var(--teal-soft); border-color:var(--teal); }
+
+  /* bin */
+  .bin-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .bin-card{
+    background:var(--card); border:1.5px solid var(--line); border-radius:10px; padding:11px; cursor:pointer; text-align:left;
+    font-family:inherit;
+  }
+  .bin-card:hover{ border-color:var(--teal); }
+  .bin-card.selected{ border-color:var(--copper); box-shadow:0 0 0 3px var(--copper-glow); }
+  .bin-card .bn{ font-weight:700; font-size:13px; }
+  .bin-card .bm{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); margin-top:3px; }
+  .bin-card .bd{ font-size:11.5px; color:var(--ink-dim); margin-top:5px; line-height:1.4; }
+  .bin-hint{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-faint); margin-bottom:10px; }
+
+  /* wiring */
+  .wire-list{ display:flex; flex-direction:column; gap:9px; }
+  .wire-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 13px; }
+  .wire-row .wn{ flex:1; font-size:13.5px; font-weight:600; }
+  .wire-row .ww{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-faint); }
+  .wire-row.done{ opacity:.6; }
+  .wire-row .tick{ color:var(--teal); font-weight:700; display:none; }
+  .wire-row.done .tick{ display:inline; }
+  .wire-actions{ display:flex; gap:8px; align-items:center; }
+  .tick-mini{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--teal); font-weight:700; }
+
+  /* cabling */
+  .cable-diagram{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .cable-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:8px; }
+  .cable-dot-label{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-dim); width:70px; }
+  .cable-btn{
+    flex:1; background:var(--bg-raised); border:1.5px dashed var(--line); border-radius:8px; padding:8px 10px;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); cursor:pointer; text-align:center;
+  }
+  .cable-btn.done{ border-style:solid; border-color:var(--teal); background:var(--teal-soft); color:var(--teal); font-weight:600; }
+  .cable-btn.uplink{ border-color:var(--copper); }
+  .cable-btn.uplink.done{ border-color:var(--copper); background:var(--copper-soft); color:var(--copper); }
+
+  /* boot sequence */
+  .boot-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
+  .boot-tile{
+    background:var(--card); border:1.5px solid var(--line); border-radius:12px; padding:14px; text-align:center; cursor:pointer;
+  }
+  .boot-tile .bt-name{ font-weight:700; font-size:13.5px; margin-top:8px; }
+  .boot-tile .bt-order{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+  .boot-tile.done{ border-color:var(--teal); background:var(--teal-soft); }
+  .boot-tile.shake{ animation:shake .3s ease; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+  @media (prefers-reduced-motion: reduce){ .boot-tile.shake{ animation:none; } }
+  .power-dot{ width:30px; height:30px; border-radius:50%; background:var(--bg-raised); border:2px solid var(--ink-faint); margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .boot-tile.done .power-dot{ background:var(--teal); border-color:var(--teal); color:var(--card); }
+
+  /* summary */
+  .summary-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .summary-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:14px 0; }
+  .summary-stat .sl{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
+  .summary-stat .sv{ font-family:"IBM Plex Mono",monospace; font-size:19px; font-weight:600; margin-top:3px; }
+  .summary-list{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:5px; }
+  .summary-list li{ font-size:13.5px; display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding-bottom:5px; }
+
+  footer.page-foot{ text-align:center; padding:30px 0 10px; color:var(--ink-faint); font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.03em; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">Guided Build · Home Lab or Datacenter</span>
+      <h1>Rack Zero</h1>
+      <p class="sub">Power budget first, hardware second — the way it's actually done in the field. Nova walks you from an empty frame to a clean boot sequence, whether that's a closet rack or a Tier-rated datacenter cabinet.</p>
+    </div>
+    <div class="step-pill mono" id="stepPill">Step 1 / 9</div>
+  </header>
+
+  <div class="profile-bar" id="profileBar"></div>
+
+  <section class="guide-box" id="guideBox"></section>
+  <section class="dashboard" id="dashSection" hidden>
+    <div class="section-title">Power Dashboard</div>
+    <div class="dash-grid" id="dashGrid"></div>
+  </section>
+  <section class="rack-section" id="rackSection" hidden>
+    <div class="section-title">Rack Elevation</div>
+    <div class="rack-frame-wrap" id="rackFrameWrap">
+      <div class="rack-frame" id="rackFrame"></div>
+      <div class="tech-avatar" id="techAvatar"></div>
+    </div>
+  </section>
+  <section class="bin-section" id="binSection" hidden>
+    <div class="section-title">Parts Bin</div>
+    <p class="bin-hint" id="binHint"></p>
+    <div class="bin-grid" id="binGrid"></div>
+  </section>
+  <section class="wiring-section" id="wiringSection" hidden>
+    <div class="section-title">Power Wiring</div>
+    <div class="wire-list" id="wireList"></div>
+  </section>
+  <section class="cabling-section" id="cablingSection" hidden>
+    <div class="section-title">Structured Cabling</div>
+    <div class="cable-diagram" id="cableDiagram"></div>
+  </section>
+  <section class="boot-section" id="bootSection" hidden>
+    <div class="section-title">Boot Sequence</div>
+    <div class="boot-grid" id="bootGrid"></div>
+  </section>
+  <section class="summary-section" id="summarySection" hidden></section>
+
+  <footer class="page-foot">RACK ZERO · a guided sim — always verify wiring and breaker capacity against your own local electrical code before doing this for real</footer>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const RACKS = {
+  '9u':{u:9, label:'9U wall-mount — compact, fits a closet shelf'},
+  '12u':{u:12, label:'12U wall-mount — more room to grow into'}
+};
+const CIRCUITS = {
+  '15a':{amps:15, volts:120, va:1800, cont:1440, label:'15A / 120V — standard household outlet'},
+  '20a':{amps:20, volts:120, va:2400, cont:1920, label:'20A / 120V — kitchen/garage-code circuit'}
+};
+const UPS_TIERS = {
+  compact:{key:'compact', name:'Compact UPS', va:600, watts:330, u:1, runtime:'~9 min at light load', blurb:'Enough to save your work during a blink — not built to run a whole lab.'},
+  standard:{key:'standard', name:'Standard UPS', va:1500, watts:900, u:2, runtime:'~14 min at light load', blurb:'The sweet spot for a small home lab — real headroom to grow into.'},
+  large:{key:'large', name:'Large UPS', va:3000, watts:2700, u:2, runtime:'~11 min at light load', blurb:'Serious capacity — but check it against your circuit before you buy one this big.'}
+};
+const PARTS = {
+  patchpanel:{key:'patchpanel', name:'24-Port Patch Panel', u:1, watts:0, type:'patchpanel', desc:'Where wall cabling lands. Fully passive — no power draw.'},
+  cablebar:{key:'cablebar', name:'Cable Management Bar', u:1, watts:0, type:'cablebar', desc:'Keeps patch cables routed and off the gear below.'},
+  switch:{key:'switch', name:'8-Port PoE+ Switch', u:1, watts:65, type:'device', desc:'Managed switch, up to 65W of PoE budget for cameras or APs.'},
+  router:{key:'router', name:'1U Router / Firewall', u:1, watts:15, type:'device', desc:'Small-form-factor appliance — a typical draw for home-lab routing gear.'},
+  nas:{key:'nas', name:'1U Mini-PC / NAS', u:1, watts:30, type:'device', desc:'Light compute or storage node.'}
+};
+const BOOT_ORDER = ['modem','router','switch','nas'];
+const BOOT_NAMES = {modem:'Modem', router:'Router', switch:'Switch', nas:'NAS'};
+
+/* ---- datacenter tier data ---- */
+const DC_TIERS = {
+  '1':{key:'1', name:'Tier I — Basic Capacity', uptime:'99.671%', downtime:'~28.8 hrs/yr', feeds:1, redundancy:'N (no redundancy)', blurb:'Single path for power and cooling. A single failure anywhere takes the site down.'},
+  '2':{key:'2', name:'Tier II — Redundant Components', uptime:'99.741%', downtime:'~22 hrs/yr', feeds:1, redundancy:'N+1 components', blurb:'Extra UPS and cooling modules, but still one distribution path — you can lose a component, not the whole path.'},
+  '3':{key:'3', name:'Tier III — Concurrently Maintainable', uptime:'99.982%', downtime:'~1.6 hrs/yr', feeds:2, redundancy:'N+1, dual path', blurb:'Two independent power paths. Either can be taken down for maintenance with zero impact on the load.'},
+  '4':{key:'4', name:'Tier IV — Fault Tolerant', uptime:'99.995%', downtime:'~26 min/yr', feeds:2, redundancy:'2N, both paths live', blurb:'Two independent paths, both active at once. A single failure — planned or not — has zero impact.'}
+};
+const DC_RACKS = {
+  '24u':{u:24, label:'24U half-rack — smaller deployment'},
+  '42u':{u:42, label:'42U full-size rack — datacenter standard'}
+};
+const DC_CIRCUITS = {
+  'l620':{amps:20, volts:208, va:4160, cont:3328, label:'L6-20 · 20A/208V twist-lock'},
+  'l630':{amps:30, volts:208, va:6240, cont:4992, label:'L6-30 · 30A/208V twist-lock'}
+};
+const DC_PDU_TYPES = {
+  basic:{key:'basic', name:'Basic PDU', blurb:'Fans one circuit out to multiple outlets. No visibility, no remote control.'},
+  metered:{key:'metered', name:'Metered PDU', blurb:'Same fan-out, plus a running total of load — so you see capacity coming instead of guessing.'},
+  switched:{key:'switched', name:'Switched / Managed PDU', blurb:'Adds remote per-outlet control — power-cycle a hung server from your desk, or a different continent.'}
+};
+const DC_PARTS = {
+  tor_switch:{key:'tor_switch', name:'Top-of-Rack Switch', u:1, watts:150, type:'device', desc:'Dual power supplies feeding the same load — one cord to each feed.'},
+  core_router:{key:'core_router', name:'Core Router / Firewall', u:1, watts:250, type:'device', desc:'Dual-PSU appliance at the edge of this rack’s network.'},
+  server:{key:'server', name:'2U Server', u:2, watts:500, type:'device', desc:'Dual power supplies, redundant cooling — the standard datacenter building block.'}
+};
+const DC_BOOT_ORDER = ['core_router','tor_switch','server'];
+const DC_BOOT_NAMES = {core_router:'Core Router', tor_switch:'ToR Switch', server:'Server'};
+
+const PHASES_HOME = ['intro','chooseTier','chooseRack','chooseCircuit','chooseUPS','introGear','placement','wiring','cabling','bootSequence','complete'];
+const PHASES_DC   = ['intro','chooseTier','chooseDCTier','chooseRack','chooseCircuit','choosePDU','introGear','placement','wiring','cabling','bootSequence','complete'];
+function currentPhases(){ return state.buildType==='dc' ? PHASES_DC : PHASES_HOME; }
+function stepNumber(){ const arr=currentPhases(); return Math.min(arr.indexOf(state.phase)+1, arr.length); }
+function currentBootOrder(){ return state.buildType==='dc' ? DC_BOOT_ORDER : BOOT_ORDER; }
+function currentBootNames(){ return state.buildType==='dc' ? DC_BOOT_NAMES : BOOT_NAMES; }
+
+function freshState(){
+  return {
+    phase:'intro', buildType:null,
+    rack:null, circuit:null, ups:null, dcTier:null, pdu:null, feeds:[],
+    rackU:0, slots:[], // slots[i] = partKey or null, index0 = U1 (bottom)
+    binKeys:[], selectedBin:null,
+    wireUpsConnected:false, wiredDevices:[], wiredFeeds:{},
+    cableCount:0, uplinkDone:false,
+    bootNext:0
+  };
+}
+
+/* ---------------- save / profile system ---------------- */
+function loadProfiles(){ try{ return JSON.parse(localStorage.getItem('rackzero-profiles')||'{}'); }catch(e){ return {}; } }
+function saveProfiles(){ try{ localStorage.setItem('rackzero-profiles', JSON.stringify(profiles)); }catch(e){} }
+function getActiveId(){ try{ return localStorage.getItem('rackzero-active'); }catch(e){ return null; } }
+function setActiveId(id){ try{ localStorage.setItem('rackzero-active', id); }catch(e){} }
+function newProfileId(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'just now';
+  const m = Math.floor(s/60); if(m<60) return `${m}m ago`;
+  const h = Math.floor(m/60); if(h<24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+let profiles = loadProfiles();
+let activeId = getActiveId();
+if(!activeId || !profiles[activeId]){
+  activeId = newProfileId();
+  profiles[activeId] = {name:'Build 1', state:freshState(), updatedAt:Date.now()};
+  saveProfiles(); setActiveId(activeId);
+}
+let state = profiles[activeId].state;
+let resetArmed = false, resetTimer = null, dropdownOpen = false;
+
+function persist(){
+  profiles[activeId].state = state;
+  profiles[activeId].updatedAt = Date.now();
+  saveProfiles();
+}
+
+function renderProfileBar(){
+  const bar = document.getElementById('profileBar');
+  const current = profiles[activeId];
+  const rows = Object.entries(profiles).sort((a,b)=>b[1].updatedAt-a[1].updatedAt).map(([id,p])=>`
+    <div class="profile-row ${id===activeId?'active':''}">
+      <button class="profile-pick" data-pick="${id}">${escapeHtml(p.name)}</button>
+      <span class="profile-meta mono">${timeAgo(p.updatedAt)}</span>
+      ${id!==activeId?`<button class="profile-del" data-del="${id}" aria-label="Delete build">✕</button>`:''}
+    </div>`).join('');
+  bar.innerHTML = `
+    <input class="profile-name-input" id="profileNameInput" value="${escapeHtml(current.name)}" aria-label="Build name">
+    <button class="btn btn-ghost btn-sm" id="switchBtn">Switch builds ▾</button>
+    <button class="btn btn-ghost btn-sm" id="resetBarBtn">${resetArmed?'Click again to reset':'Reset this build'}</button>
+    <span class="save-indicator">Autosaved</span>
+    ${dropdownOpen?`<div class="profile-dropdown">${rows}<button class="btn btn-choice btn-sm profile-new" id="newBuildBtn">+ New build</button></div>`:''}
+  `;
+  document.getElementById('profileNameInput').addEventListener('change', (e)=>{
+    const v = e.target.value.trim() || 'Untitled Build';
+    profiles[activeId].name = v; persist(); renderProfileBar();
+  });
+  document.getElementById('switchBtn').onclick = ()=>{ dropdownOpen = !dropdownOpen; renderProfileBar(); };
+  document.getElementById('resetBarBtn').onclick = ()=>{
+    if(!resetArmed){
+      resetArmed = true; renderProfileBar();
+      resetTimer = setTimeout(()=>{ resetArmed=false; renderProfileBar(); }, 3000);
+    } else {
+      clearTimeout(resetTimer); resetArmed = false;
+      state = freshState(); persist(); render();
+    }
+  };
+  bar.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
+    activeId = b.getAttribute('data-pick'); setActiveId(activeId);
+    state = profiles[activeId].state; dropdownOpen = false; render();
+  });
+  bar.querySelectorAll('[data-del]').forEach(b=>b.onclick=(e)=>{
+    e.stopPropagation();
+    delete profiles[b.getAttribute('data-del')]; saveProfiles(); renderProfileBar();
+  });
+  const newBtn = document.getElementById('newBuildBtn');
+  if(newBtn) newBtn.onclick = ()=>{
+    const id = newProfileId();
+    profiles[id] = {name:`Build ${Object.keys(profiles).length+1}`, state:freshState(), updatedAt:Date.now()};
+    saveProfiles(); activeId = id; setActiveId(id); state = profiles[id].state;
+    dropdownOpen = false; render();
+  };
+}
+
+/* ---------------- icons ---------------- */
+function novaSvg(mood){
+  const mouth = mood==='happy' ? 'M -8 6 Q 0 13 8 6' : 'M -7 7 Q 0 11 7 7';
+  return `<svg width="52" height="52" viewBox="-26 -26 52 52">
+    <circle cx="0" cy="0" r="24" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2.2"/>
+    <circle cx="-8" cy="-4" r="2.6" fill="var(--ink)"/>
+    <circle cx="8" cy="-4" r="2.6" fill="var(--ink)"/>
+    <path d="${mouth}" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M -18 -16 A 20 20 0 0 1 4 -22" fill="none" stroke="var(--copper)" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="4" cy="-22" r="2.6" fill="var(--copper)"/>
+  </svg>`;
+}
+function technicianSvg(){
+  return `<svg width="26" height="34" viewBox="0 0 26 34" aria-hidden="true">
+    <circle cx="13" cy="8" r="7" fill="var(--card)" stroke="var(--teal)" stroke-width="2.4"/>
+    <circle cx="10.5" cy="7.5" r="1.2" fill="var(--ink)"/><circle cx="15.5" cy="7.5" r="1.2" fill="var(--ink)"/>
+    <path d="M9.5 10.5 Q13 13 16.5 10.5" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M4 2 A 9 9 0 0 1 13 -2" fill="none" stroke="var(--copper)" stroke-width="2" stroke-linecap="round" transform="translate(0,4)"/>
+    <path d="M13 15 L13 25 M13 18 L5 23 M13 18 L21 23 M13 25 L7 33 M13 25 L19 33" fill="none" stroke="var(--copper)" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+function pulseEl(el){ if(!el) return; el.classList.remove('tech-pulse'); void el.offsetWidth; el.classList.add('tech-pulse'); }
+function actWithPulse(el, fn, delay){ pulseEl(el); setTimeout(fn, delay||220); }
+function moveAvatarTo(targetEl, cb){
+  const wrap = document.getElementById('rackFrameWrap');
+  const avatar = document.getElementById('techAvatar');
+  if(!wrap || !avatar || !targetEl){ if(cb) cb(); return; }
+  if(!avatar.dataset.ready){ avatar.innerHTML = technicianSvg(); avatar.dataset.ready = '1'; }
+  const wrapRect = wrap.getBoundingClientRect();
+  const tRect = targetEl.getBoundingClientRect();
+  avatar.style.top = (tRect.top - wrapRect.top + tRect.height/2 - 17) + 'px';
+  avatar.classList.add('active');
+  if(cb) setTimeout(cb, 380);
+}
+function deviceIcon(type){
+  if(type==='patchpanel') return '▦';
+  if(type==='cablebar') return '≋';
+  if(type==='ups') return '⏻';
+  return '▤';
+}
+
+/* ---------------- render dispatcher ---------------- */
+function render(){
+  document.getElementById('stepPill').textContent = `Step ${stepNumber()} / ${currentPhases().length}`;
+  renderProfileBar();
+  renderGuide();
+  renderDashboard();
+  renderRack();
+  renderBin();
+  renderWiring();
+  renderCabling();
+  renderBoot();
+  renderSummary();
+  persist();
+}
+
+/* ---------------- guide box ---------------- */
+function guideHTML(text, note){
+  return `<div class="nova-portrait">${novaSvg('happy')}</div>
+    <div class="nova-body">
+      <div class="nova-name">NOVA — YOUR BUILD GUIDE</div>
+      <div class="nova-text">${text}</div>
+      ${note?`<div class="nova-note">${note}</div>`:''}
+      <div class="guide-actions" id="guideActions"></div>
+    </div>`;
+}
+
+function renderGuide(){
+  const box = document.getElementById('guideBox');
+  const actionsInto = (html)=>{ box.innerHTML = html; };
+
+  if(state.phase==='intro'){
+    actionsInto(guideHTML(`Hey — I'm Nova. I'll walk you through building a rack the way it's actually done in the field: <span class="fact">power budget first</span>, hardware second, cabling third, boot order last. Most people do it backwards and find out the hard way. Ready to start from scratch?`));
+    document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn">Let's build it</button>`;
+    document.getElementById('goBtn').onclick = ()=>{ state.phase='chooseTier'; render(); };
+  }
+
+  else if(state.phase==='chooseTier'){
+    actionsInto(guideHTML(`Two ways to go from here. A <span class="fact">home lab</span> runs on a single wall circuit — simple, and completely fine for personal use. A <span class="fact">datacenter build</span> follows the Uptime Institute's Tier system (Tier I through IV), which grades a facility by how much redundancy it has in power and cooling. Which one are we building?`));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = `
+      <button class="btn btn-choice choice-card" data-bt="homelab">
+        <div class="choice-title">Home Lab</div>
+        <div class="choice-blurb">A single wall circuit, one UPS, a small wall-mount rack.</div>
+      </button>
+      <button class="btn btn-choice choice-card" data-bt="dc">
+        <div class="choice-title">Datacenter Build</div>
+        <div class="choice-blurb">Tiered redundancy, dual power feeds, a full-size cabinet.</div>
+      </button>`;
+    const btHome = actions.querySelector('[data-bt="homelab"]'), btDc = actions.querySelector('[data-bt="dc"]');
+    btHome.onclick = ()=>actWithPulse(btHome, ()=>{ state.buildType='homelab'; state.phase='chooseRack'; render(); });
+    btDc.onclick = ()=>actWithPulse(btDc, ()=>{ state.buildType='dc'; state.phase='chooseDCTier'; render(); });
+  }
+
+  else if(state.phase==='chooseDCTier'){
+    actionsInto(guideHTML(`The Uptime Institute grades datacenters Tier I through IV by redundancy, not size. Higher tiers cost more to build, but the uptime math is real. Which one are we scoping?`));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = Object.values(DC_TIERS).map(t=>`
+      <button class="btn btn-choice choice-card" data-t="${t.key}">
+        <div class="choice-title">${t.name}</div>
+        <div class="choice-meta">${t.uptime} uptime · ${t.downtime} downtime · ${t.redundancy}</div>
+        <div class="choice-blurb">${t.blurb}</div>
+      </button>`).join('');
+    actions.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      state.dcTier = DC_TIERS[b.getAttribute('data-t')];
+      state.phase='chooseRack'; render();
+    }));
+  }
+
+  else if(state.phase==='chooseRack'){
+    const isDc = state.buildType==='dc';
+    const RACKS_SRC = isDc ? DC_RACKS : RACKS;
+    const text = isDc
+      ? `First decision: the cabinet. Every rack-mount device is sized in <span class="fact">U</span> — one rack unit is exactly <span class="fact">1.75 inches</span> tall, and the mounting rails are a standard <span class="fact">19 inches</span> wide, same as any home lab. Datacenters just use a lot more of them. How big a cabinet?`
+      : `First decision: the frame. Every rack-mount device is sized in <span class="fact">U</span> — one rack unit is exactly <span class="fact">1.75 inches</span> tall, and the mounting rails are a standard <span class="fact">19 inches</span> wide no matter whose gear you buy. That's the whole reason a switch from one company bolts into a rack from a totally different one. How much vertical room do we plan for?`;
+    actionsInto(guideHTML(text));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = Object.keys(RACKS_SRC).map(k=>`<button class="btn btn-choice" data-rack="${k}">${RACKS_SRC[k].label}</button>`).join('');
+    actions.querySelectorAll('[data-rack]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      const k = b.getAttribute('data-rack');
+      state.rack = RACKS_SRC[k]; state.rackU = state.rack.u;
+      state.slots = Array(state.rackU).fill(null);
+      state.phase='chooseCircuit'; render();
+    }));
+  }
+
+  else if(state.phase==='chooseCircuit'){
+    const isDc = state.buildType==='dc';
+    const CIRCUITS_SRC = isDc ? DC_CIRCUITS : CIRCUITS;
+    const text = isDc
+      ? `Before we buy a single box, we need to know what we're plugging into. Datacenter racks usually run on 208V circuits instead of the 120V in a home outlet — same <span class="fact">80% continuous-load rule</span> from electrical code, just bigger numbers. What's feeding this cabinet?`
+      : `Before we buy a single box, we need to know what we're plugging into — the step almost everyone skips. US electrical code says a <span class="fact">continuous load shouldn't exceed 80%</span> of a circuit's rating, because breakers are only rated to hold 100% briefly. So the number that actually matters is 80% of the circuit, not the circuit itself. What are we working with?`;
+    const note = (isDc && state.dcTier.feeds===2)
+      ? `Because you picked ${state.dcTier.name.split(' — ')[0]}, you'll need <span class="fact">two</span> of whatever you choose here — one circuit for Feed A, an identical one for Feed B. Each has to be able to carry the full load completely on its own.`
+      : null;
+    actionsInto(guideHTML(text, note));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = Object.keys(CIRCUITS_SRC).map(k=>{
+      const c = CIRCUITS_SRC[k];
+      return `<button class="btn btn-choice choice-card" data-c="${k}">
+        <div class="choice-title">${c.label}</div>
+        <div class="choice-meta">${c.amps}A × ${c.volts}V = ${c.va}VA → ${c.cont}W continuous (80% rule)</div>
+      </button>`;
+    }).join('');
+    actions.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      state.circuit = CIRCUITS_SRC[b.getAttribute('data-c')];
+      if(isDc){
+        state.feeds = state.dcTier.feeds===2 ? ['A','B'] : ['A'];
+        state.phase='choosePDU';
+      } else {
+        state.phase='chooseUPS';
+      }
+      render();
+    }));
+  }
+
+  else if(state.phase==='choosePDU'){
+    actionsInto(guideHTML(`Last piece before the gear list: the PDU. It's what actually fans your circuit out into the outlets each device plugs into inside the rack.`));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = Object.values(DC_PDU_TYPES).map(p=>`
+      <button class="btn btn-choice choice-card" data-p="${p.key}">
+        <div class="choice-title">${p.name}</div>
+        <div class="choice-blurb">${p.blurb}</div>
+      </button>`).join('');
+    actions.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      state.pdu = DC_PDU_TYPES[b.getAttribute('data-p')];
+      state.phase='introGear'; render();
+    }));
+  }
+
+  else if(state.phase==='chooseUPS'){
+    actionsInto(guideHTML(`Now the UPS. Its job isn't to run your house — it's to ride out a blip and shut things down cleanly if the power's really out. Bigger isn't automatically better: a UPS rated way past what your circuit can deliver is just idle capacity you paid for. Pick one that fits your circuit and your gear, with a little room to grow.`));
+    const actions = document.getElementById('guideActions');
+    actions.innerHTML = Object.values(UPS_TIERS).map(u=>`
+      <button class="btn btn-choice choice-card" data-u="${u.key}">
+        <div class="choice-title">${u.name} — ${u.u}U</div>
+        <div class="choice-meta">${u.va}VA / ${u.watts}W · runtime ${u.runtime}</div>
+        <div class="choice-blurb">${u.blurb}</div>
+      </button>`).join('');
+    actions.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      state.ups = UPS_TIERS[b.getAttribute('data-u')];
+      state.phase='introGear'; render();
+    }));
+  }
+
+  else if(state.phase==='introGear'){
+    const isDc = state.buildType==='dc';
+    let text, note;
+    if(isDc){
+      text = `Here's the rest of the gear list. Same two numbers matter — <span class="fact">U</span> and <span class="fact">watts</span> — but notice these are dual-corded: every active device has two power supplies.`;
+      note = state.feeds.length===2
+        ? `Because you're on ${state.dcTier.name.split(' — ')[0]}, every active device below needs <span class="fact">two power cords</span> — one to Feed A, one to Feed B. That's what makes the redundancy real instead of theoretical.`
+        : `Single feed here — no redundancy at the power layer, which matches ${state.dcTier.name.split(' — ')[0]}.`;
+    } else {
+      text = `Here's the rest of the gear list. Every device you rack has two numbers that matter before anything else: how many <span class="fact">U</span> it takes, and how many <span class="fact">watts</span> it draws.`;
+      note = state.ups.watts > state.circuit.cont
+        ? `Heads up — the ${state.ups.name} is rated for more continuous power (${state.ups.watts}W) than your ${state.circuit.label} circuit can safely deliver (${state.circuit.cont}W). Not a dealbreaker, but the circuit — not the UPS — is your real ceiling.`
+        : null;
+    }
+    actionsInto(guideHTML(text, note));
+    document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn2">Let's mount it</button>`;
+    document.getElementById('goBtn2').onclick = ()=>{
+      state.binKeys = isDc ? ['patchpanel','cablebar','tor_switch','core_router','server'] : ['patchpanel','cablebar','switch','router','nas','ups'];
+      state.phase='placement'; render();
+    };
+  }
+
+  else if(state.phase==='placement'){
+    const remaining = state.binKeys.filter(k=>!isPlaced(k));
+    const isDc = state.buildType==='dc';
+    if(remaining.length>0){
+      const text = isDc
+        ? `Real mounting order, top to bottom: <span class="fact">patch panel up top</span> — that's where structured cabling lands. The <span class="fact">ToR switch</span> goes just below it, so every server has the shortest possible cable run. Servers fill in <span class="fact">from the bottom up</span> — it keeps the cabinet's center of gravity low and matches how airflow is usually planned. One more thing: real rack units are numbered from the <span class="fact">bottom up</span> — U1 is the lowest slot, not the top. Pick a part below, then click an empty slot to mount it.`
+        : `Real mounting order, top to bottom: <span class="fact">patch panel up top</span> — that's where wall cabling lands, keep it clear of heat-generating gear. Active gear like the switch and router goes in the middle, where you'll actually reach it. The <span class="fact">UPS goes dead last, at the very bottom</span> — it's the heaviest single thing in the rack, and a top-heavy rack is a tipping hazard. One more thing: real rack units are numbered from the <span class="fact">bottom up</span> — U1 is the lowest slot, not the top. Pick a part below, then click an empty slot to mount it.`;
+      actionsInto(guideHTML(text));
+      document.getElementById('guideActions').innerHTML = '';
+    } else {
+      actionsInto(guideHTML(layoutReviewText()));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn3">Power it up</button>`;
+      document.getElementById('goBtn3').onclick = ()=>{ state.phase='wiring'; render(); };
+    }
+  }
+
+  else if(state.phase==='wiring'){
+    const isDc = state.buildType==='dc';
+    if(isDc){
+      const activeKeys = state.binKeys.filter(k=>getPart(k).watts>0);
+      const allWired = activeKeys.every(k=>isFullyWired(k));
+      if(!allWired){
+        const text = state.feeds.length===2
+          ? `Time to bring power in. Every active device gets a cord to <span class="fact">Feed A</span> and a cord to <span class="fact">Feed B</span> — that's what makes the redundancy real instead of theoretical. Notice the patch panel and cable bar aren't listed — passive copper, nothing to plug in.`
+          : `Time to bring power in. Connect each active device to the feed. Notice the patch panel and cable bar aren't listed — passive copper, nothing to plug in.`;
+        actionsInto(guideHTML(text));
+        document.getElementById('guideActions').innerHTML='';
+      } else {
+        const load = totalLoad();
+        actionsInto(guideHTML(`Every feed is carrying <span class="fact">${load}W</span> of your ${state.circuit.cont}W-per-feed budget${state.feeds.length===2?' — and remember, each feed has to be able to shoulder that full load completely on its own':''}.`));
+        document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn4">Patch it in</button>`;
+        document.getElementById('goBtn4').onclick = ()=>{ state.phase='cabling'; render(); };
+      }
+      return;
+    }
+    if(!state.wireUpsConnected){
+      actionsInto(guideHTML(`Time to bring power in. The UPS itself plugs straight into the wall circuit we budgeted earlier.`));
+      document.getElementById('guideActions').innerHTML='';
+    } else if(state.wiredDevices.length < 3){
+      actionsInto(guideHTML(`Now connect each active device to the UPS. Notice the patch panel and cable bar aren't in this list — they're passive copper, nothing to plug in.`));
+      document.getElementById('guideActions').innerHTML='';
+    } else {
+      actionsInto(guideHTML(`Your load is sitting at <span class="fact">${totalLoad()}W</span> of the UPS's ${state.ups.watts}W capacity — plenty of headroom for a future camera or access point.`));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn4">Patch it in</button>`;
+      document.getElementById('goBtn4').onclick = ()=>{ state.phase='cabling'; render(); };
+    }
+  }
+
+  else if(state.phase==='cabling'){
+    const isDc = state.buildType==='dc';
+    if(state.cableCount<4 || !state.uplinkDone){
+      const text = isDc
+        ? `Structured cabling in one sentence: <span class="fact">wall/fiber entry → patch panel → short patch cable → ToR switch</span>. Then one uplink carries everything from the ToR switch to the core router.`
+        : `Structured cabling in one sentence: <span class="fact">wall jack → patch panel → short patch cable → switch</span>. The patch panel is just a landing pad; the real signal path is that short jumper to the switch. Then one uplink cable carries everything from the switch to the router.`;
+      actionsInto(guideHTML(text));
+      document.getElementById('guideActions').innerHTML='';
+    } else {
+      actionsInto(guideHTML(isDc
+        ? `Cabling's done — every jack has a clean path to the ToR switch, and the switch has its uplink to the core router.`
+        : `Cabling's done — every jack has a clean path to the switch, and the switch has its uplink to the router.`));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn5">Last step — boot it up</button>`;
+      document.getElementById('goBtn5').onclick = ()=>{ state.phase='bootSequence'; render(); };
+    }
+  }
+
+  else if(state.phase==='bootSequence'){
+    const isDc = state.buildType==='dc';
+    const order = currentBootOrder();
+    if(state.bootNext < order.length){
+      const text = isDc
+        ? `Last real-world habit: boot order. <span class="fact">Core router first</span> — it's this rack's uplink to the rest of the network, so bring it up before anything that depends on it. Then the <span class="fact">ToR switch</span>. Then the <span class="fact">servers</span>. Boot servers before their network path exists and some will sit there stuck waiting on DHCP or a volume they can't reach yet.`
+        : `Last real-world habit: boot order. <span class="fact">Modem first</span> — give it time to sync with your ISP. Then the <span class="fact">router</span>, so it has a WAN connection the moment it's ready. Then the <span class="fact">switch</span>. Then everything else. Get the order wrong and some gear won't renegotiate a link on its own — you'll be power-cycling things at midnight wondering why the internet's down.`;
+      actionsInto(guideHTML(text));
+      document.getElementById('guideActions').innerHTML='';
+    } else {
+      actionsInto(guideHTML(`Clean boot, in the right order. That's it — you just built a rack the way a professional scopes one.`));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn6">See the finished build</button>`;
+      document.getElementById('goBtn6').onclick = ()=>{ state.phase='complete'; render(); };
+    }
+  }
+
+  else if(state.phase==='complete'){
+    const isDc = state.buildType==='dc';
+    actionsInto(guideHTML(isDc
+      ? `That's a real Tier ${state.dcTier.key} build: redundancy planned before a single box was racked, a right circuit-and-PDU pairing, sensible mounting order, structured cabling, and a clean boot sequence. Most builds skip straight to buying gear — you didn't.`
+      : `That's a real rack build, start to finish: power budget, a right-sized UPS, sensible mounting order, structured cabling, and a clean boot sequence. Most home labs skip straight to buying gear — you didn't.`));
+    document.getElementById('guideActions').innerHTML = `<button class="btn btn-ghost" id="resetBtn">Build another rack</button>`;
+    document.getElementById('resetBtn').onclick = ()=>{ state = freshState(); render(); };
+  }
+}
+
+function layoutReviewText(){
+  const isDc = state.buildType==='dc';
+  const heavyKey = isDc ? 'server' : 'ups';
+  const patchIdx = findPart('patchpanel');
+  const heavyIdx = findPart(heavyKey);
+  const patchNearTop = patchIdx!==-1 && patchIdx >= state.rackU-2;
+  const heavyNearBottom = heavyIdx!==-1 && heavyIdx <= (isDc?3:1);
+  let msg = `Nice — every fixture's mounted. `;
+  if(patchNearTop && heavyNearBottom) msg += isDc
+    ? `Patch panel's up top, the server's down low. That's the layout a real datacenter build-out sheet would show.`
+    : `Patch panel's up top, UPS is down low. That's exactly the layout a rack-mount guide would tell you to build.`;
+  else {
+    msg += `Quick review: `;
+    if(!patchNearTop) msg += `the patch panel usually sits nearer the top, closer to where structured cabling enters. `;
+    if(!heavyNearBottom) msg += isDc
+      ? `the server is the heaviest single item here — keeping heavy gear low keeps the cabinet stable. `
+      : `the UPS is the heaviest single item here — real installs keep it as low as possible for stability. `;
+    msg += `Nothing's broken electrically, just worth knowing for next time.`;
+  }
+  return msg;
+}
+
+function getPart(key){
+  if(key==='ups') return state.ups;
+  return PARTS[key] || DC_PARTS[key] || null;
+}
+function findPart(key){ return state.slots.findIndex(s=>s===key); }
+function isPlaced(key){ return state.slots.includes(key); }
+function isFullyWired(key){ return (state.wiredFeeds[key]||[]).length >= state.feeds.length; }
+function totalLoad(){
+  if(state.buildType==='dc'){
+    return Object.keys(state.wiredFeeds).filter(k=>isFullyWired(k)).reduce((sum,k)=>sum+getPart(k).watts,0);
+  }
+  return state.wiredDevices.reduce((sum,k)=>sum+PARTS[k].watts,0);
+}
+
+/* ---------------- dashboard ---------------- */
+function meterCard(label,valueText,pct,subtext,cls){
+  return `<div class="meter-card">
+    <div class="meter-label">${label}</div>
+    <div class="meter-value">${valueText}</div>
+    <div class="meter-bar"><div class="meter-fill ${cls||''}" style="width:${Math.min(100,pct)}%"></div></div>
+    <div class="meter-sub">${subtext}</div>
+  </div>`;
+}
+function renderDashboard(){
+  const show = state.circuit!==null;
+  document.getElementById('dashSection').hidden = !show;
+  if(!show) return;
+  const grid = document.getElementById('dashGrid');
+  let html = '';
+  if(state.buildType==='dc'){
+    state.feeds.forEach(f=>{
+      const loadOnFeed = Object.keys(state.wiredFeeds)
+        .filter(k=>(state.wiredFeeds[k]||[]).includes(f))
+        .reduce((s,k)=>s+getPart(k).watts,0);
+      const pct = (loadOnFeed/state.circuit.cont)*100;
+      html += meterCard(`Feed ${f} Capacity`, `${state.circuit.cont}W`, pct, `${loadOnFeed}W live · ${Math.round(pct)}% used`, pct>80?'warn':'');
+    });
+  } else {
+    html = meterCard('Circuit Budget', `${state.circuit.cont}W`, 0, `${state.circuit.label} · 80% continuous-load rule`, '');
+    if(state.ups){
+      const upsPct = (state.ups.watts/state.circuit.cont)*100;
+      html += meterCard('UPS Capacity', `${state.ups.watts}W`, Math.min(100,upsPct), upsPct>100?'Exceeds circuit’s continuous rating':`${Math.round(upsPct)}% of circuit budget`, upsPct>100?'danger':'');
+    }
+    if(state.wireUpsConnected){
+      const load = totalLoad();
+      const loadPct = (load/state.ups.watts)*100;
+      html += meterCard('Live Load on UPS', `${load}W`, loadPct, `${Math.round(loadPct)}% of ${state.ups.watts}W · plenty of headroom`, loadPct>80?'warn':'');
+    }
+  }
+  grid.innerHTML = html;
+}
+
+/* ---------------- rack ---------------- */
+function renderRack(){
+  const show = state.rackU>0;
+  document.getElementById('rackSection').hidden = !show;
+  if(!show) return;
+  const frame = document.getElementById('rackFrame');
+  let rows = '';
+  for(let i=state.rackU-1;i>=0;i--){
+    const key = state.slots[i];
+    const uLabel = `U${i+1}`;
+    if(key){
+      if(isTopHalfOfSpan(i,key)) continue; // skip, drawn as part of the span below
+      const span = partSpan(key);
+      const part = getPart(key);
+      const name = part.name;
+      const watts = part.watts>0 ? `${part.watts}W` : 'passive';
+      const powered = state.buildType==='dc'
+        ? (part.watts>0 && isFullyWired(key))
+        : (key!=='ups' && key!=='patchpanel' && key!=='cablebar' && state.wiredDevices.includes(key));
+      const typeClass = key==='ups' ? 'type-ups' : (key==='patchpanel' ? 'type-patchpanel' : (key==='cablebar' ? 'type-cablebar' : ''));
+      rows += `<div class="rack-slot" style="height:${34*span}px">
+        <span class="rack-u-label">${uLabel}</span>
+        <div class="rack-item ${typeClass} ${powered?'on':''}">
+          <span class="led"></span><span>${name}</span><span class="rw mono">${watts}</span>
+        </div>
+      </div>`;
+    } else {
+      const selectable = state.phase==='placement' && state.selectedBin;
+      rows += `<div class="rack-slot empty ${selectable?'selectable':''}" data-slot="${i}">
+        <span class="rack-u-label">${uLabel}</span>
+      </div>`;
+    }
+  }
+  frame.innerHTML = rows;
+  frame.querySelectorAll('.rack-slot.empty').forEach(el=>{
+    el.onclick = ()=>{
+      if(state.phase!=='placement' || !state.selectedBin) return;
+      const idx = parseInt(el.getAttribute('data-slot'));
+      moveAvatarTo(el, ()=>tryPlace(idx));
+    };
+  });
+}
+function partSpan(key){ return getPart(key).u; }
+function isTopHalfOfSpan(i,key){
+  // returns true if slot i is the upper cell of a 2U part (already rendered by its base row)
+  if(partSpan(key)<2) return false;
+  return state.slots[i-1]===key;
+}
+
+function tryPlace(clickedIndex){
+  const key = state.selectedBin;
+  const span = partSpan(key);
+  const fits = (start)=>{
+    if(start<0 || start+span>state.rackU) return false;
+    for(let j=0;j<span;j++){ if(state.slots[start+j]) return false; }
+    return true;
+  };
+  let start = null;
+  if(fits(clickedIndex)) start = clickedIndex;
+  else if(fits(clickedIndex-span+1)) start = clickedIndex-span+1;
+  else if(fits(clickedIndex-1)) start = clickedIndex-1;
+  if(start===null){ flashNoRoom(); return; }
+  for(let j=0;j<span;j++){ state.slots[start+j] = key; }
+  state.selectedBin = null;
+  render();
+}
+function flashNoRoom(){
+  const hint = document.getElementById('binHint');
+  if(hint){ hint.textContent = `Not enough clear space there — this part needs ${partSpan(state.selectedBin)}U. Try another slot.`; hint.style.color='var(--danger)'; }
+}
+
+/* ---------------- bin ---------------- */
+function renderBin(){
+  const show = state.phase==='placement';
+  document.getElementById('binSection').hidden = !show;
+  if(!show) return;
+  const remaining = state.binKeys.filter(k=>!isPlaced(k));
+  const hint = document.getElementById('binHint');
+  hint.style.color='var(--ink-faint)';
+  hint.textContent = state.selectedBin ? `Selected: ${partName(state.selectedBin)} — click a highlighted empty slot in the rack above.` : (remaining.length? 'Click a part, then click an empty slot in the rack.' : '');
+  document.getElementById('binGrid').innerHTML = remaining.map(k=>{
+    const p = getPart(k);
+    const desc = k==='ups' ? state.ups.blurb : p.desc;
+    return `<button class="bin-card ${state.selectedBin===k?'selected':''}" data-bin="${k}">
+      <div class="bn">${p.name}</div>
+      <div class="bm mono">${p.u}U · ${p.watts>0?p.watts+'W':'passive'}</div>
+      <div class="bd">${desc}</div>
+    </button>`;
+  }).join('');
+  document.getElementById('binGrid').querySelectorAll('[data-bin]').forEach(el=>{
+    el.onclick = ()=>{ state.selectedBin = state.selectedBin===el.getAttribute('data-bin') ? null : el.getAttribute('data-bin'); render(); };
+  });
+}
+function partName(k){ return getPart(k).name; }
+
+/* ---------------- wiring ---------------- */
+function renderWiring(){
+  const show = state.phase==='wiring';
+  document.getElementById('wiringSection').hidden = !show;
+  if(!show) return;
+  const list = document.getElementById('wireList');
+  if(state.buildType==='dc'){
+    const activeKeys = state.binKeys.filter(k=>getPart(k).watts>0);
+    let dcHtml = '';
+    activeKeys.forEach(k=>{
+      const part = getPart(k);
+      const connected = state.wiredFeeds[k]||[];
+      const full = connected.length>=state.feeds.length;
+      const btns = state.feeds.map(f=>{
+        const done = connected.includes(f);
+        return done ? `<span class="tick-mini">✓ ${f}</span>` : `<button class="btn btn-primary" data-wire="${k}" data-feed="${f}">Connect ${f}</button>`;
+      }).join('');
+      dcHtml += `<div class="wire-row ${full?'done':''}">
+        <span class="wn">${part.name}</span>
+        <span class="ww mono">${part.watts}W</span>
+        <span class="wire-actions">${btns}</span>
+      </div>`;
+    });
+    list.innerHTML = dcHtml;
+    list.querySelectorAll('[data-wire]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+      const k=b.getAttribute('data-wire'), f=b.getAttribute('data-feed');
+      if(!state.wiredFeeds[k]) state.wiredFeeds[k]=[];
+      if(!state.wiredFeeds[k].includes(f)) state.wiredFeeds[k].push(f);
+      render();
+    }));
+    return;
+  }
+  let html = `<div class="wire-row ${state.wireUpsConnected?'done':''}">
+    <span class="wn">UPS → ${state.circuit.label}</span>
+    <span class="ww mono">wall power</span>
+    <span class="tick">✓</span>
+    ${!state.wireUpsConnected?'<button class="btn btn-primary" id="plugUpsBtn">Plug in</button>':''}
+  </div>`;
+  if(state.wireUpsConnected){
+    ['switch','router','nas'].forEach(k=>{
+      const done = state.wiredDevices.includes(k);
+      html += `<div class="wire-row ${done?'done':''}">
+        <span class="wn">${PARTS[k].name} → UPS</span>
+        <span class="ww mono">${PARTS[k].watts}W</span>
+        <span class="tick">✓</span>
+        ${!done?`<button class="btn btn-primary" data-wire="${k}">Connect</button>`:''}
+      </div>`;
+    });
+  }
+  list.innerHTML = html;
+  const plugBtn = document.getElementById('plugUpsBtn');
+  if(plugBtn) plugBtn.onclick = ()=>actWithPulse(plugBtn, ()=>{ state.wireUpsConnected=true; render(); });
+  list.querySelectorAll('[data-wire]').forEach(b=>b.onclick=()=>actWithPulse(b, ()=>{
+    state.wiredDevices.push(b.getAttribute('data-wire')); render();
+  }));
+}
+
+/* ---------------- cabling ---------------- */
+function renderCabling(){
+  const show = state.phase==='cabling';
+  document.getElementById('cablingSection').hidden = !show;
+  if(!show) return;
+  const isDc = state.buildType==='dc';
+  const el = document.getElementById('cableDiagram');
+  let rows = '';
+  for(let i=1;i<=4;i++){
+    const done = state.cableCount>=i;
+    rows += `<div class="cable-row">
+      <span class="cable-dot-label mono">Panel P${i}</span>
+      <button class="cable-btn ${done?'done':''}" data-cable="${i}">${done?'Connected ✓':'Connect patch cable →'}</button>
+      <span class="cable-dot-label mono">${isDc?'ToR':'Switch'} S${i}</span>
+    </div>`;
+  }
+  rows += `<div class="cable-row" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--line)">
+    <span class="cable-dot-label mono">${isDc?'ToR Up':'Switch Up'}</span>
+    <button class="cable-btn uplink ${state.uplinkDone?'done':''}" id="uplinkBtn">${state.uplinkDone?'Uplink connected ✓':'Connect uplink →'}</button>
+    <span class="cable-dot-label mono">${isDc?'Core LAN':'Router LAN'}</span>
+  </div>`;
+  el.innerHTML = rows;
+  el.querySelectorAll('[data-cable]').forEach(b=>{
+    b.onclick = ()=>{
+      const n = parseInt(b.getAttribute('data-cable'));
+      if(n===state.cableCount+1){ actWithPulse(b, ()=>{ state.cableCount++; render(); }); }
+    };
+  });
+  const uplinkBtn = document.getElementById('uplinkBtn');
+  if(uplinkBtn) uplinkBtn.onclick = ()=>{ if(state.cableCount>=4){ actWithPulse(uplinkBtn, ()=>{ state.uplinkDone=true; render(); }); } };
+}
+
+/* ---------------- boot sequence ---------------- */
+function renderBoot(){
+  const show = state.phase==='bootSequence';
+  document.getElementById('bootSection').hidden = !show;
+  if(!show) return;
+  const order = currentBootOrder(), names = currentBootNames();
+  const grid = document.getElementById('bootGrid');
+  grid.innerHTML = order.map((k,i)=>`
+    <div class="boot-tile ${i<state.bootNext?'done':''}" data-boot="${k}" data-i="${i}">
+      <div class="power-dot mono">${i<state.bootNext?'✓':'⏻'}</div>
+      <div class="bt-name">${names[k]}</div>
+      <div class="bt-order mono">step ${i+1}</div>
+    </div>`).join('');
+  grid.querySelectorAll('.boot-tile').forEach(el=>{
+    el.onclick = ()=>{
+      const i = parseInt(el.getAttribute('data-i'));
+      if(i===state.bootNext){ actWithPulse(el, ()=>{ state.bootNext++; render(); }); }
+      else { el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),300); }
+    };
+  });
+}
+
+/* ---------------- summary ---------------- */
+function renderSummary(){
+  const show = state.phase==='complete';
+  document.getElementById('summarySection').hidden = !show;
+  if(!show) return;
+  const isDc = state.buildType==='dc';
+  const used = state.slots.filter(Boolean).length;
+  const load = totalLoad();
+  const list = state.binKeys.map(k=>{
+    const p = getPart(k);
+    return `<li><span>${p.name}</span><span class="mono">${p.u}U</span></li>`;
+  }).join('');
+  const statsHtml = isDc ? `
+        <div class="summary-stat"><div class="sl">Tier</div><div class="sv">Tier ${state.dcTier.key} · ${state.dcTier.uptime}</div></div>
+        <div class="summary-stat"><div class="sl">Feeds</div><div class="sv">${state.feeds.join(' + ')} · ${state.circuit.cont}W each</div></div>
+        <div class="summary-stat"><div class="sl">Load</div><div class="sv">${load}W</div></div>` : `
+        <div class="summary-stat"><div class="sl">Rack</div><div class="sv">${used}/${state.rackU}U used</div></div>
+        <div class="summary-stat"><div class="sl">Circuit</div><div class="sv">${state.circuit.cont}W cont.</div></div>
+        <div class="summary-stat"><div class="sl">UPS Load</div><div class="sv">${load}/${state.ups.watts}W</div></div>`;
+  document.getElementById('summarySection').innerHTML = `
+    <div class="summary-card">
+      <div class="section-title">Build Sheet</div>
+      <div class="summary-grid">${statsHtml}</div>
+      <ul class="summary-list">${list}</ul>
+    </div>`;
+}
+
+render();
+</script>
