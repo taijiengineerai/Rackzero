@@ -200,11 +200,11 @@
   .bin-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
   .bin-card{
     background:var(--card); border:1.5px solid var(--line); border-radius:10px; padding:11px; cursor:pointer; text-align:left;
-    font-family:inherit;
+    font-family:inherit; color:var(--ink);
   }
   .bin-card:hover{ border-color:var(--teal); }
   .bin-card.selected{ border-color:var(--copper); box-shadow:0 0 0 3px var(--copper-glow); }
-  .bin-card .bn{ font-weight:700; font-size:13px; }
+  .bin-card .bn{ font-weight:700; font-size:13px; color:var(--ink); }
   .bin-card .bm{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); margin-top:3px; }
   .bin-card .bd{ font-size:11.5px; color:var(--ink-dim); margin-top:5px; line-height:1.4; }
   .bin-hint{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-faint); margin-bottom:10px; }
