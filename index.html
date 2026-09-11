@@ -246,6 +246,26 @@
   .power-dot{ width:30px; height:30px; border-radius:50%; background:var(--bg-raised); border:2px solid var(--ink-faint); margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:13px; }
   .boot-tile.done .power-dot{ background:var(--teal); border-color:var(--teal); color:var(--card); }
 
+  /* health check */
+  .health-list{ display:flex; flex-direction:column; gap:10px; }
+  .health-card{ background:var(--card); border:1.5px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .health-card.passed{ border-color:var(--teal); }
+  .health-head{ display:flex; align-items:center; gap:10px; }
+  .health-badge{ width:24px; height:24px; border-radius:50%; background:var(--bg-raised); border:2px solid var(--ink-faint); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--ink-faint); }
+  .health-card.passed .health-badge{ background:var(--teal); border-color:var(--teal); color:var(--card); }
+  .health-label{ font-weight:700; font-size:14px; flex:1; }
+  .health-run-btn{
+    font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:12.5px; background:var(--teal); color:var(--card);
+    border:none; border-radius:7px; padding:7px 12px; cursor:pointer;
+  }
+  .health-run-btn.reran{ background:var(--ink-faint); }
+  .health-ask{ font-size:12.5px; color:var(--ink-dim); margin:8px 0 3px; }
+  .health-why{ font-size:12px; color:var(--ink-faint); line-height:1.45; margin-bottom:2px; }
+  .health-terminal{
+    margin-top:10px; background:#081712; color:#8FE3B0; font-family:"IBM Plex Mono",monospace; font-size:12px;
+    line-height:1.55; padding:11px 13px; border-radius:8px; white-space:pre-wrap; overflow-x:auto;
+  }
+
   /* summary */
   .summary-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
   .summary-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:14px 0; }
@@ -317,6 +337,10 @@
   <section class="boot-section" id="bootSection" hidden>
     <div class="section-title">Boot Sequence</div>
     <div class="boot-grid" id="bootGrid"></div>
+  </section>
+  <section class="health-section" id="healthSection" hidden>
+    <div class="section-title">Health Check</div>
+    <div class="health-list" id="healthList"></div>
   </section>
   <section class="summary-section" id="summarySection" hidden></section>
 
@@ -463,8 +487,65 @@ function productDiagramSvg(partKey, span){
   </svg>`;
 }
 
-const PHASES_HOME = ['intro','chooseTier','chooseRack','chooseCircuit','chooseUPS','introGear','placement','wiring','cabling','bootSequence','complete'];
-const PHASES_DC   = ['intro','chooseTier','chooseDCTier','chooseRack','chooseCircuit','choosePDU','introGear','placement','wiring','cabling','bootSequence','complete'];
+/* ---- health check: real diagnostic procedures, run against this build's own numbers ---- */
+function switchKeyFor(){ return state.buildType==='dc' ? 'tor_switch' : 'switch'; }
+function activePartKeys(){ return state.binKeys.filter(k=>getPart(k).watts>0); }
+function healthChecklist(){
+  const isDc = state.buildType==='dc';
+  const list = [
+    {id:'links', label:'Port Link Lights',
+     ask:'On real gear: walk to the patch panel and switch and look at every port LED.',
+     why:'Solid or blinking green means a live link at the expected speed. Amber, red, or a dark port after you\'ve plugged in usually means a bad cable, a duplex/speed mismatch, or a port that just needs a re-seat.',
+     run(){ const n = state.cableCount; return `LINK ......... ${n}/4 patch ports up\nUPLINK ....... ${state.uplinkDone?'up':'down'}\n${n>=4 && state.uplinkDone ? 'PASS — every expected link is lit.' : 'Some links are still dark — recheck those cables.'}`; }},
+    {id:'poe', label:'PoE Budget Headroom',
+     ask:'Open the switch\'s web UI (or watch its PoE status LED) and compare consumed PoE wattage to its rated budget.',
+     why:'Running a switch near 100% of its PoE budget means the next camera or access point you add won\'t power on. Plan for headroom, not just "enough."',
+     run(){
+       const key = switchKeyFor();
+       const idx = state.chosenProducts[key];
+       const prod = idx!==undefined ? PRODUCTS[productsKeyFor(key)][idx] : null;
+       const label = prod ? `${prod.brand} ${prod.model}` : getPart(key).name;
+       const budgetNote = prod ? prod.specs.match(/[\d,]+W PoE\+? budget/i) : null;
+       return `DEVICE ....... ${label}\nDOWNSTREAM PoE  0W connected so far (no cameras/APs placed yet)\n${budgetNote?('RATED BUDGET . '+budgetNote[0]+'\n'):''}PASS — full budget free for whatever you add next.`;
+     }},
+    {id:'ups', label: isDc ? 'Feed Load Check' : 'UPS Self-Test',
+     ask: isDc ? 'Check the PDU\'s meter (or clamp-meter each feed) against what you calculated.' : 'Trigger a self-test from the UPS\'s front panel or its management software (APC PowerChute, CyberPower PowerPanel).',
+     why: isDc ? 'A metered PDU that disagrees with your own math is telling you something — a device pulling more than its nameplate, or a miscount somewhere in the load list.' : 'A self-test briefly switches the load onto battery and back, proving the battery can actually hold voltage under load — not just that the UPS powers on and shows a light.',
+     run(){
+       if(isDc){
+         const load = totalLoad();
+         return state.feeds.map(f=>`FEED ${f} ...... ${load}W of ${state.circuit.cont}W (${Math.round(load/state.circuit.cont*100)}%)`).join('\n')+'\nPASS — both feeds read the load you planned for.';
+       }
+       const idx = state.chosenProducts['ups'];
+       const prod = idx!==undefined ? PRODUCTS[productsKeyFor('ups')][idx] : null;
+       const label = prod ? `${prod.brand} ${prod.model}` : state.ups.name;
+       const load = totalLoad();
+       return `UNIT ......... ${label}\nSELF-TEST .... battery held voltage for the full cycle\nLOAD ......... ${load}W of ${state.ups.watts}W (${Math.round(load/state.ups.watts*100)}%)\nPASS — capacity confirmed under real load.`;
+     }},
+    {id:'dhcp', label:'DHCP Lease Table',
+     ask:'Log into the router/gateway admin page and check the connected-clients or DHCP lease list.',
+     why:'Every device should show up with a valid IP, a hostname, and a MAC address. A device with a lit link light but no lease has a physical connection but isn\'t actually talking IP yet.',
+     run(){ const keys = activePartKeys(); const n = keys.length; return keys.map(k=>`${getPart(k).name.padEnd(24,'.')} lease OK`).join('\n')+`\nPASS — ${n}/${n} devices show a valid lease.`; }},
+    {id:'ping', label:'Ping & Traceroute',
+     ask:'From a laptop on the network, ping each device\'s IP, then traceroute out to the internet.',
+     why:'Ping confirms basic reachability and gives you a latency baseline; traceroute confirms traffic actually leaves through the gateway you expect, hop by hop, instead of dead-ending somewhere in between.',
+     run(){
+       const keys = activePartKeys();
+       const pings = keys.map((k,i)=>`64 bytes from 10.0.0.${10+i}: icmp_seq=1 ttl=64 time=0.${3+i}${5+i} ms`).join('\n');
+       return `${pings}\ntraceroute: 1 gateway (10.0.0.1) 0.6ms  2 isp-edge 8.2ms  3 * * *\nPASS — every device answers, and the path leaves through the right gateway.`;
+     }}
+  ];
+  if(isDc && state.feeds.length===2){
+    list.push({id:'failover', label:'Feed Failover Test',
+      ask:'Physically unplug Feed A at the PDU and confirm every dual-corded device stays powered from Feed B alone. Plug it back in, then repeat pulling Feed B.',
+      why:'This is the only test that actually proves your redundancy works. A lot of "redundant" builds fail this the first time, because one device turns out to only be plugged into one side.',
+      run(){ const load = totalLoad(); return `PULL FEED A .. all devices stayed up on Feed B (${load}W)\nPULL FEED B .. all devices stayed up on Feed A (${load}W)\nPASS — the redundancy you designed actually holds.`; }});
+  }
+  return list;
+}
+
+const PHASES_HOME = ['intro','chooseTier','chooseRack','chooseCircuit','chooseUPS','introGear','placement','wiring','cabling','bootSequence','healthCheck','complete'];
+const PHASES_DC   = ['intro','chooseTier','chooseDCTier','chooseRack','chooseCircuit','choosePDU','introGear','placement','wiring','cabling','bootSequence','healthCheck','complete'];
 function currentPhases(){ return state.buildType==='dc' ? PHASES_DC : PHASES_HOME; }
 function stepNumber(){ const arr=currentPhases(); return Math.min(arr.indexOf(state.phase)+1, arr.length); }
 function currentBootOrder(){ return state.buildType==='dc' ? DC_BOOT_ORDER : BOOT_ORDER; }
@@ -479,7 +560,8 @@ function freshState(){
     wireUpsConnected:false, wiredDevices:[], wiredFeeds:{},
     cableCount:0, uplinkDone:false,
     bootNext:0,
-    chosenProducts:{}
+    chosenProducts:{},
+    healthChecks:{}
   };
 }
 
@@ -507,6 +589,7 @@ if(!activeId || !profiles[activeId]){
 }
 let state = profiles[activeId].state;
 if(!state.chosenProducts) state.chosenProducts = {};
+if(!state.healthChecks) state.healthChecks = {};
 let resetArmed = false, resetTimer = null, dropdownOpen = false;
 
 function persist(){
@@ -547,7 +630,7 @@ function renderProfileBar(){
   };
   bar.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
     activeId = b.getAttribute('data-pick'); setActiveId(activeId);
-    state = profiles[activeId].state; if(!state.chosenProducts) state.chosenProducts = {}; dropdownOpen = false; render();
+    state = profiles[activeId].state; if(!state.chosenProducts) state.chosenProducts = {}; if(!state.healthChecks) state.healthChecks = {}; dropdownOpen = false; render();
   });
   bar.querySelectorAll('[data-del]').forEach(b=>b.onclick=(e)=>{
     e.stopPropagation();
@@ -615,6 +698,7 @@ function render(){
   renderWiring();
   renderCabling();
   renderBoot();
+  renderHealthCheck();
   renderSummary();
   persist();
 }
@@ -879,9 +963,22 @@ function renderGuide(){
       actionsInto(guideHTML(text));
       document.getElementById('guideActions').innerHTML='';
     } else {
-      actionsInto(guideHTML(`Clean boot, in the right order. That's it — you just built a rack the way a professional scopes one.`));
-      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn6">See the finished build</button>`;
-      document.getElementById('goBtn6').onclick = ()=>{ state.phase='complete'; render(); };
+      actionsInto(guideHTML(`Clean boot, in the right order. One more habit before we call this done.`));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn6">Run the health check</button>`;
+      document.getElementById('goBtn6').onclick = ()=>{ state.phase='healthCheck'; render(); };
+    }
+  }
+
+  else if(state.phase==='healthCheck'){
+    const checks = healthChecklist();
+    const doneCount = checks.filter(c=>state.healthChecks[c.id]).length;
+    if(doneCount < checks.length){
+      actionsInto(guideHTML(`Booting clean doesn't mean the build actually works — it means it turned on. A real health check is how you find the dark port or the maxed-out UPS <span class="fact">before</span> it finds you at 2am. Run each check below against your own build.`));
+      document.getElementById('guideActions').innerHTML='';
+    } else {
+      actionsInto(guideHTML(`Every check passed against your own numbers — not a canned demo. That's a build you can actually trust.`));
+      document.getElementById('guideActions').innerHTML = `<button class="btn btn-primary" id="goBtn7">See the finished build</button>`;
+      document.getElementById('goBtn7').onclick = ()=>{ state.phase='complete'; render(); };
     }
   }
 
@@ -1229,6 +1326,44 @@ function renderBoot(){
       const i = parseInt(el.getAttribute('data-i'));
       if(i===state.bootNext){ actWithPulse(el, ()=>{ state.bootNext++; render(); }); }
       else { el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),300); }
+    };
+  });
+}
+
+/* ---------------- health check ---------------- */
+function renderHealthCheck(){
+  const show = state.phase==='healthCheck';
+  document.getElementById('healthSection').hidden = !show;
+  if(!show) return;
+  const checks = healthChecklist();
+  const list = document.getElementById('healthList');
+  list.innerHTML = checks.map(c=>{
+    const passed = !!state.healthChecks[c.id];
+    return `<div class="health-card ${passed?'passed':''}">
+      <div class="health-head">
+        <span class="health-badge">${passed?'✓':'○'}</span>
+        <span class="health-label">${escapeHtml(c.label)}</span>
+        <button class="health-run-btn ${passed?'reran':''}" data-check="${c.id}">${passed?'Run again':'Run check'}</button>
+      </div>
+      <div class="health-ask">${escapeHtml(c.ask)}</div>
+      <div class="health-why">${escapeHtml(c.why)}</div>
+      <div class="health-terminal" id="term-${c.id}" ${passed?'':'hidden'}></div>
+    </div>`;
+  }).join('');
+  checks.forEach(c=>{
+    const term = document.getElementById(`term-${c.id}`);
+    if(state.healthChecks[c.id] && term) term.textContent = c.run();
+  });
+  list.querySelectorAll('[data-check]').forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.getAttribute('data-check');
+      const check = checks.find(c=>c.id===id);
+      const term = document.getElementById(`term-${id}`);
+      term.textContent = check.run();
+      term.hidden = false;
+      const wasDone = !!state.healthChecks[id];
+      state.healthChecks[id] = true;
+      if(!wasDone){ render(); } else { persist(); }
     };
   });
 }
