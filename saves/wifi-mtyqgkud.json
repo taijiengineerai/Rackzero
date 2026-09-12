@@ -80,7 +80,9 @@
         "A"
       ]
     },
-    "patchLinks": {},
+    "patchLinks": {
+      "1": 2
+    },
     "selectedPanelPort": null,
     "uplinkDone": false,
     "bootNext": 0,
