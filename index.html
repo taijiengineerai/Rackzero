@@ -55,8 +55,10 @@
   }
   .profile-name-input:focus{ outline:none; border-color:var(--teal); }
   .btn-sm{ font-size:12px; padding:7px 11px; }
-  .save-indicator{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); display:flex; align-items:center; gap:5px; }
+  .save-indicator{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); display:flex; align-items:center; gap:5px; cursor:help; }
   .save-indicator::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--teal); }
+  .save-indicator.warn{ color:var(--danger); font-weight:600; }
+  .save-indicator.warn::before{ background:var(--danger); }
   .profile-dropdown{
     position:absolute; top:calc(100% + 6px); left:0; background:var(--card); border:1px solid var(--line);
     border-radius:10px; box-shadow:0 10px 26px var(--shadow); padding:8px; min-width:240px; z-index:20;
@@ -68,6 +70,17 @@
   .profile-meta{ font-size:10.5px; color:var(--ink-faint); white-space:nowrap; }
   .profile-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:2px 4px; }
   .profile-new{ width:100%; margin-top:4px; }
+
+  /* step tracker */
+  .step-tracker{ display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px; scrollbar-width:thin; }
+  .step-chip{
+    flex-shrink:0; font-family:"IBM Plex Mono",monospace; font-size:11px; white-space:nowrap;
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:20px; padding:6px 12px;
+    color:var(--ink-faint); cursor:not-allowed;
+  }
+  .step-chip.reached{ color:var(--ink-dim); cursor:pointer; border-color:var(--teal); }
+  .step-chip.reached:hover{ background:var(--teal-soft); color:var(--teal); }
+  .step-chip.current{ background:var(--teal); border-color:var(--teal); color:var(--card); font-weight:600; cursor:default; }
 
   section{ margin-bottom:22px; }
   section[hidden]{ display:none; }
@@ -231,6 +244,24 @@
   .cable-btn.done{ border-style:solid; border-color:var(--teal); background:var(--teal-soft); color:var(--teal); font-weight:600; }
   .cable-btn.uplink{ border-color:var(--copper); }
   .cable-btn.uplink.done{ border-color:var(--copper); background:var(--copper-soft); color:var(--copper); }
+  .cable-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .uplink-row{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+
+  .patch-board{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .patch-col-title{ font-size:10.5px; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:8px; text-align:center; }
+  .patch-ports{ display:flex; flex-direction:column; gap:7px; }
+  .patch-port{
+    display:flex; align-items:center; justify-content:center; gap:6px; flex-direction:column;
+    background:var(--bg-raised); border:1.5px dashed var(--line); border-radius:8px; padding:8px 6px;
+    cursor:pointer; font-family:"IBM Plex Mono",monospace;
+  }
+  .patch-port .pp-num{ font-size:12px; font-weight:600; color:var(--ink-dim); }
+  .patch-port .pp-link{ font-size:9.5px; color:var(--teal); }
+  .patch-port.selected{ border-style:solid; border-color:var(--amber); background:var(--amber-soft); box-shadow:0 0 0 3px var(--amber-glow); }
+  .patch-port.selected .pp-num{ color:var(--amber); }
+  .patch-port.connected{ border-style:solid; border-color:var(--teal); background:var(--teal-soft); }
+  .patch-port.connected .pp-num{ color:var(--teal); }
+  .patch-status{ text-align:center; font-size:11.5px; color:var(--ink-faint); margin-top:12px; }
 
   /* boot sequence */
   .boot-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
@@ -245,6 +276,49 @@
   @media (prefers-reduced-motion: reduce){ .boot-tile.shake{ animation:none; } }
   .power-dot{ width:30px; height:30px; border-radius:50%; background:var(--bg-raised); border:2px solid var(--ink-faint); margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:13px; }
   .boot-tile.done .power-dot{ background:var(--teal); border-color:var(--teal); color:var(--card); }
+
+  /* console */
+  .console-overlay{
+    position:fixed; inset:0; background:rgba(10,14,12,.65); backdrop-filter:blur(2px);
+    display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:70; overflow-y:auto;
+  }
+  .console-overlay.open{ opacity:1; pointer-events:auto; }
+  .console-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; max-width:680px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.4); transform:translateY(10px); transition:transform .2s ease;
+    max-height:88vh; display:flex; flex-direction:column;
+  }
+  .console-overlay.open .console-card{ transform:translateY(0); }
+  .console-head{ display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+  .console-head h3{ font-family:"IBM Plex Sans Condensed",sans-serif; font-weight:700; font-size:16px; flex:1; }
+  .console-vendor-pick{ padding:20px; }
+  .vendor-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .vendor-card{
+    border:1.5px solid var(--line); border-radius:10px; padding:14px; background:var(--bg-raised); cursor:pointer;
+    text-align:left; font-family:inherit; color:var(--ink);
+  }
+  .vendor-card:hover{ border-color:var(--teal); }
+  .vendor-card .vc-name{ font-weight:700; font-size:14px; margin-bottom:4px; }
+  .vendor-card .vc-blurb{ font-size:12px; color:var(--ink-dim); line-height:1.45; }
+  .term-screen{
+    background:#0b1410; color:#c7f0d6; font-family:"IBM Plex Mono",monospace; font-size:12.5px; line-height:1.6;
+    padding:14px 16px; height:360px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;
+  }
+  .term-line-cmd{ color:#e7ffee; }
+  .term-line-err{ color:#ff9b8a; }
+  .term-line-hint{ color:#6fa88c; }
+  .term-input-row{ display:flex; align-items:center; gap:8px; padding:10px 16px; background:#0b1410; border-top:1px solid #1b2b25; }
+  .term-prompt{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:#c7f0d6; white-space:nowrap; }
+  .term-input{
+    flex:1; background:none; border:none; outline:none; color:#e7ffee; font-family:"IBM Plex Mono",monospace; font-size:12.5px;
+  }
+  .console-foot{ padding:10px 20px 16px; }
+  .console-hint{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); }
+  .console-open-btn{
+    font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:12.5px; background:var(--teal); color:var(--card);
+    border:none; border-radius:7px; padding:8px 13px; cursor:pointer; margin-top:14px;
+  }
 
   /* health check */
   .health-list{ display:flex; flex-direction:column; gap:10px; }
@@ -304,6 +378,7 @@
   </header>
 
   <div class="profile-bar" id="profileBar"></div>
+  <div class="step-tracker" id="stepTracker"></div>
 
   <section class="guide-box" id="guideBox"></section>
   <section class="dashboard" id="dashSection" hidden>
@@ -349,6 +424,10 @@
 
 <div class="sheet-overlay" id="sheetOverlay">
   <div class="sheet-card" id="sheetCard" role="dialog" aria-modal="true"></div>
+</div>
+
+<div class="console-overlay" id="consoleOverlay">
+  <div class="console-card" id="consoleCard" role="dialog" aria-modal="true"></div>
 </div>
 
 <script>
@@ -489,6 +568,14 @@ function productDiagramSvg(partKey, span){
 
 /* ---- health check: real diagnostic procedures, run against this build's own numbers ---- */
 function switchKeyFor(){ return state.buildType==='dc' ? 'tor_switch' : 'switch'; }
+function parsePortCount(partKey){
+  const idx = state.chosenProducts[partKey];
+  const src = idx!==undefined ? PRODUCTS[productsKeyFor(partKey)][idx].specs : getPart(partKey).name;
+  const m = src.match(/(\d+)[\s-]*port/i);
+  return m ? parseInt(m[1]) : 8;
+}
+function cablingPortCount(){ return Math.max(4, Math.min(parsePortCount(switchKeyFor()), 6)); }
+function cablingComplete(){ return Object.keys(state.patchLinks).length>=cablingPortCount() && state.uplinkDone; }
 function activePartKeys(){ return state.binKeys.filter(k=>getPart(k).watts>0); }
 function healthChecklist(){
   const isDc = state.buildType==='dc';
@@ -496,7 +583,7 @@ function healthChecklist(){
     {id:'links', label:'Port Link Lights',
      ask:'On real gear: walk to the patch panel and switch and look at every port LED.',
      why:'Solid or blinking green means a live link at the expected speed. Amber, red, or a dark port after you\'ve plugged in usually means a bad cable, a duplex/speed mismatch, or a port that just needs a re-seat.',
-     run(){ const n = state.cableCount; return `LINK ......... ${n}/4 patch ports up\nUPLINK ....... ${state.uplinkDone?'up':'down'}\n${n>=4 && state.uplinkDone ? 'PASS — every expected link is lit.' : 'Some links are still dark — recheck those cables.'}`; }},
+     run(){ const n = Object.keys(state.patchLinks).length; const total = cablingPortCount(); return `LINK ......... ${n}/${total} patch ports up\nUPLINK ....... ${state.uplinkDone?'up':'down'}\n${n>=total && state.uplinkDone ? 'PASS — every expected link is lit.' : 'Some links are still dark — recheck those cables.'}`; }},
     {id:'poe', label:'PoE Budget Headroom',
      ask:'Open the switch\'s web UI (or watch its PoE status LED) and compare consumed PoE wattage to its rated budget.',
      why:'Running a switch near 100% of its PoE budget means the next camera or access point you add won\'t power on. Plan for headroom, not just "enough."',
@@ -550,6 +637,26 @@ function currentPhases(){ return state.buildType==='dc' ? PHASES_DC : PHASES_HOM
 function stepNumber(){ const arr=currentPhases(); return Math.min(arr.indexOf(state.phase)+1, arr.length); }
 function currentBootOrder(){ return state.buildType==='dc' ? DC_BOOT_ORDER : BOOT_ORDER; }
 function currentBootNames(){ return state.buildType==='dc' ? DC_BOOT_NAMES : BOOT_NAMES; }
+const PHASE_LABELS = {
+  intro:'Start', chooseTier:'Tier', chooseDCTier:'DC Tier', chooseRack:'Rack', chooseCircuit:'Circuit',
+  chooseUPS:'UPS', choosePDU:'PDU', introGear:'Gear List', placement:'Mount Gear', wiring:'Power Wiring',
+  cabling:'Cabling', bootSequence:'Boot', healthCheck:'Health Check', complete:'Build Sheet'
+};
+function renderStepTracker(){
+  const el = document.getElementById('stepTracker');
+  if(!el) return;
+  const phases = currentPhases();
+  const curIdx = phases.indexOf(state.phase);
+  if(curIdx > (state.furthestPhaseIdx||0)) state.furthestPhaseIdx = curIdx;
+  el.innerHTML = phases.map((p,i)=>{
+    const reached = i<=state.furthestPhaseIdx;
+    const current = i===curIdx;
+    return `<button class="step-chip ${current?'current':''} ${reached?'reached':''}" ${reached&&!current?'':'disabled'} data-jump="${p}" title="${reached?'Jump back to review or change this':'Not reached yet'}">${i+1}. ${PHASE_LABELS[p]||p}</button>`;
+  }).join('');
+  el.querySelectorAll('[data-jump]:not(:disabled)').forEach(b=>{
+    b.onclick = ()=>{ state.phase = b.getAttribute('data-jump'); render(); };
+  });
+}
 
 function freshState(){
   return {
@@ -558,16 +665,25 @@ function freshState(){
     rackU:0, slots:[], // slots[i] = partKey or null, index0 = U1 (bottom)
     binKeys:[], selectedBin:null,
     wireUpsConnected:false, wiredDevices:[], wiredFeeds:{},
-    cableCount:0, uplinkDone:false,
+    patchLinks:{}, selectedPanelPort:null, uplinkDone:false,
     bootNext:0,
     chosenProducts:{},
-    healthChecks:{}
+    healthChecks:{},
+    consoleSessions:{},
+    furthestPhaseIdx:0
   };
 }
 
 /* ---------------- save / profile system ---------------- */
 function loadProfiles(){ try{ return JSON.parse(localStorage.getItem('rackzero-profiles')||'{}'); }catch(e){ return {}; } }
-function saveProfiles(){ try{ localStorage.setItem('rackzero-profiles', JSON.stringify(profiles)); }catch(e){} }
+let lastSaveOk = true;
+function saveProfiles(){
+  try{
+    const payload = JSON.stringify(profiles);
+    localStorage.setItem('rackzero-profiles', payload);
+    lastSaveOk = (localStorage.getItem('rackzero-profiles') === payload);
+  } catch(e){ lastSaveOk = false; }
+}
 function getActiveId(){ try{ return localStorage.getItem('rackzero-active'); }catch(e){ return null; } }
 function setActiveId(id){ try{ localStorage.setItem('rackzero-active', id); }catch(e){} }
 function newProfileId(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -590,6 +706,9 @@ if(!activeId || !profiles[activeId]){
 let state = profiles[activeId].state;
 if(!state.chosenProducts) state.chosenProducts = {};
 if(!state.healthChecks) state.healthChecks = {};
+if(!state.patchLinks) state.patchLinks = {};
+if(!state.consoleSessions) state.consoleSessions = {};
+if(state.furthestPhaseIdx===undefined) state.furthestPhaseIdx = currentPhases().indexOf(state.phase);
 let resetArmed = false, resetTimer = null, dropdownOpen = false;
 
 function persist(){
@@ -611,7 +730,7 @@ function renderProfileBar(){
     <input class="profile-name-input" id="profileNameInput" value="${escapeHtml(current.name)}" aria-label="Build name">
     <button class="btn btn-ghost btn-sm" id="switchBtn">Switch builds ▾</button>
     <button class="btn btn-ghost btn-sm" id="resetBarBtn">${resetArmed?'Click again to reset':'Reset this build'}</button>
-    <span class="save-indicator">Autosaved</span>
+    <span class="save-indicator ${lastSaveOk?'':'warn'}" title="${lastSaveOk?'Saved to this browser — refresh anytime, your build is here':'This browser is blocking saves (private/incognito mode, or storage is full/disabled) — your progress will NOT survive a refresh'}">${lastSaveOk?'Autosaved':'⚠ Not saving!'}</span>
     ${dropdownOpen?`<div class="profile-dropdown">${rows}<button class="btn btn-choice btn-sm profile-new" id="newBuildBtn">+ New build</button></div>`:''}
   `;
   document.getElementById('profileNameInput').addEventListener('change', (e)=>{
@@ -630,7 +749,7 @@ function renderProfileBar(){
   };
   bar.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
     activeId = b.getAttribute('data-pick'); setActiveId(activeId);
-    state = profiles[activeId].state; if(!state.chosenProducts) state.chosenProducts = {}; if(!state.healthChecks) state.healthChecks = {}; dropdownOpen = false; render();
+    state = profiles[activeId].state; if(!state.chosenProducts) state.chosenProducts = {}; if(!state.healthChecks) state.healthChecks = {}; if(!state.patchLinks) state.patchLinks = {}; if(!state.consoleSessions) state.consoleSessions = {}; if(state.furthestPhaseIdx===undefined) state.furthestPhaseIdx = currentPhases().indexOf(state.phase); dropdownOpen = false; render();
   });
   bar.querySelectorAll('[data-del]').forEach(b=>b.onclick=(e)=>{
     e.stopPropagation();
@@ -688,8 +807,10 @@ function deviceIcon(type){
 
 /* ---------------- render dispatcher ---------------- */
 function render(){
+  persist();
   document.getElementById('stepPill').textContent = `Step ${stepNumber()} / ${currentPhases().length}`;
   renderProfileBar();
+  renderStepTracker();
   renderGuide();
   renderDashboard();
   renderRack();
@@ -700,7 +821,6 @@ function render(){
   renderBoot();
   renderHealthCheck();
   renderSummary();
-  persist();
 }
 
 /* ---------------- shopping list ---------------- */
@@ -938,11 +1058,15 @@ function renderGuide(){
 
   else if(state.phase==='cabling'){
     const isDc = state.buildType==='dc';
-    if(state.cableCount<4 || !state.uplinkDone){
+    const swKey = switchKeyFor();
+    const swIdx = state.chosenProducts[swKey];
+    const swLabel = swIdx!==undefined ? `${PRODUCTS[productsKeyFor(swKey)][swIdx].brand} ${PRODUCTS[productsKeyFor(swKey)][swIdx].model}` : getPart(swKey).name;
+    if(!cablingComplete()){
       const text = isDc
-        ? `Structured cabling in one sentence: <span class="fact">wall/fiber entry → patch panel → short patch cable → ToR switch</span>. Then one uplink carries everything from the ToR switch to the core router.`
-        : `Structured cabling in one sentence: <span class="fact">wall jack → patch panel → short patch cable → switch</span>. The patch panel is just a landing pad; the real signal path is that short jumper to the switch. Then one uplink cable carries everything from the switch to the router.`;
-      actionsInto(guideHTML(text));
+        ? `Structured cabling in one sentence: <span class="fact">wall/fiber entry → patch panel → short patch cable → ToR switch</span>. Here's the real trick: <span class="fact">panel port numbers don't have to match switch port numbers</span> — patch panels are just landing pads. Click a panel port, then click any free switch port to patch it. The only real rules: never patch one port to two cables, and get every jack you need onto a port before you call it done.`
+        : `Structured cabling in one sentence: <span class="fact">wall jack → patch panel → short patch cable → switch</span>. Here's the real trick: <span class="fact">panel port numbers don't have to match switch port numbers</span> — patch panels are just landing pads. Click a panel port, then click any free switch port to patch it. The only real rules: never patch one port to two cables, and get every jack you need onto a port before you call it done.`;
+      const note = `You're patching to a <span class="fact">${escapeHtml(swLabel)}</span> — this exercise uses ${cablingPortCount()} of its ports.`;
+      actionsInto(guideHTML(text, note));
       document.getElementById('guideActions').innerHTML='';
     } else {
       actionsInto(guideHTML(isDc
@@ -1177,6 +1301,7 @@ function renderProductSheet(){
       </div>
     </div>`;
   }).join('');
+  const canConsole = CONSOLE_DEVICE_TYPES.includes(partKey) && deviceBooted();
   document.getElementById('sheetCard').innerHTML = `
     <div class="sheet-head">
       <h3>${part.name} — real equipment</h3>
@@ -1187,13 +1312,290 @@ function renderProductSheet(){
       <p class="sheet-diagram-caption">Illustrative diagram, not a photo of any specific model — port/bay counts are schematic.</p>
       <p class="sheet-note">Two real, current products in this category, so you can see what one actually costs and where to buy it. This trail's power-budget math keeps using its simplified ${part.watts>0?part.watts+'W':'0W'} teaching figure — always check the real nameplate rating on whatever you actually buy.</p>
       <div class="product-grid">${cards}</div>
+      ${CONSOLE_DEVICE_TYPES.includes(partKey) ? `<p class="console-hint" style="margin-top:14px">${canConsole?'This device is powered on — you can open a real CLI console on it.':'Boot this device (Boot Sequence step) before you can console into it.'}</p>${canConsole?`<button class="console-open-btn" id="openConsoleBtn">▸ Open Console</button>`:''}` : ''}
     </div>`;
   document.getElementById('sheetCloseBtn').onclick = closeProductSheet;
   document.getElementById('sheetCard').querySelectorAll('[data-choose]').forEach(b=>{
     b.onclick = ()=>{ state.chosenProducts[partKey] = parseInt(b.getAttribute('data-choose')); persist(); renderProductSheet(); renderRack(); renderShoppingList(); };
   });
+  const openConsoleBtn = document.getElementById('openConsoleBtn');
+  if(openConsoleBtn) openConsoleBtn.onclick = ()=>openConsole(partKey);
 }
 document.getElementById('sheetOverlay').addEventListener('click', (e)=>{ if(e.target.id==='sheetOverlay') closeProductSheet(); });
+
+/* ================= vendor CLI console ================= */
+const CONSOLE_DEVICE_TYPES = ['switch','tor_switch','router','core_router'];
+function deviceBooted(){
+  const idx = currentPhases().indexOf('bootSequence');
+  const cur = currentPhases().indexOf(state.phase);
+  return idx!==-1 && cur>=idx;
+}
+const VENDORS = {
+  cisco:{name:'Cisco IOS', blurb:'The classic enterprise CLI — "configure terminal", mode-based prompts, config applies the instant you hit Enter.'},
+  juniper:{name:'Juniper JunOS', blurb:'A different philosophy — you edit a candidate config and nothing takes effect until you type "commit".'}
+};
+function deviceIsSwitch(partKey){ return partKey==='switch' || partKey==='tor_switch'; }
+function deviceInterfaces(partKey, vendor){
+  const isSwitch = deviceIsSwitch(partKey);
+  const n = isSwitch ? cablingPortCount() : 2;
+  const names = [];
+  for(let i=0;i<n;i++){
+    names.push(vendor==='juniper' ? `ge-0/0/${i}` : `GigabitEthernet0/${isSwitch?i+1:i}`);
+  }
+  return names;
+}
+function interfaceUp(partKey, ifIndex){
+  if(deviceIsSwitch(partKey)){
+    const swPort = ifIndex+1;
+    return Object.values(state.patchLinks).includes(swPort);
+  }
+  // router: index 0 = WAN (assume ISP link fine once booted), index 1 = LAN (depends on uplink to switch)
+  return ifIndex===0 ? true : !!state.uplinkDone;
+}
+function getConsoleSession(partKey){
+  if(!state.consoleSessions[partKey]){
+    state.consoleSessions[partKey] = { vendor:null, mode:'user', hostname: deviceIsSwitch(partKey)?'Switch':'Router', ifs:{}, enabled:{}, history:[] };
+  }
+  return state.consoleSessions[partKey];
+}
+function openConsole(partKey){
+  consolePartKey = partKey;
+  renderConsole();
+  document.getElementById('consoleOverlay').classList.add('open');
+}
+function closeConsole(){
+  document.getElementById('consoleOverlay').classList.remove('open');
+  consolePartKey = null;
+}
+let consolePartKey = null;
+function consolePrompt(session){
+  const host = session.hostname;
+  if(session.vendor==='juniper'){
+    if(session.mode==='config') return `${host}#`;
+    return `${host}>`;
+  }
+  if(session.mode==='config') return `${host}(config)#`;
+  if(session.mode==='config-if') return `${host}(config-if)#`;
+  if(session.mode==='enable') return `${host}#`;
+  return `${host}>`;
+}
+function renderConsole(){
+  const partKey = consolePartKey;
+  const part = getPart(partKey);
+  const session = getConsoleSession(partKey);
+  const card = document.getElementById('consoleCard');
+  if(!session.vendor){
+    card.innerHTML = `
+      <div class="console-head"><h3>Console — ${escapeHtml(part.name)}</h3><button class="sheet-close" id="consoleCloseBtn">&times;</button></div>
+      <div class="console-vendor-pick">
+        <p class="sheet-note" style="margin:0">Pick which CLI you want to practice on this device. The commands and even the whole configuration philosophy are genuinely different between vendors.</p>
+        <div class="vendor-grid">
+          ${Object.values(VENDORS).map(v=>`
+            <button class="vendor-card" data-vendor="${Object.keys(VENDORS).find(k=>VENDORS[k]===v)}">
+              <div class="vc-name">${v.name}</div>
+              <div class="vc-blurb">${v.blurb}</div>
+            </button>`).join('')}
+        </div>
+      </div>`;
+    document.getElementById('consoleCloseBtn').onclick = closeConsole;
+    card.querySelectorAll('[data-vendor]').forEach(b=>{
+      b.onclick = ()=>{ session.vendor = b.getAttribute('data-vendor'); persist(); renderConsole(); };
+    });
+    return;
+  }
+  if(session.history.length===0){
+    session.history.push({lines:bootBanner(partKey,session)});
+  }
+  const histHtml = session.history.map(h=>{
+    const cmdLine = h.cmd!==undefined ? `<div class="term-line-cmd">${escapeHtml(h.promptShown||'')}${escapeHtml(h.cmd)}</div>` : '';
+    const out = (h.lines||[]).map(l=>`<div class="${l.err?'term-line-err':(l.hint?'term-line-hint':'')}">${escapeHtml(l.text!==undefined?l.text:l)}</div>`).join('');
+    return cmdLine+out;
+  }).join('');
+  card.innerHTML = `
+    <div class="console-head"><h3>${VENDORS[session.vendor].name} — ${escapeHtml(part.name)}</h3><button class="sheet-close" id="consoleCloseBtn">&times;</button></div>
+    <div class="term-screen" id="termScreen">${histHtml}</div>
+    <div class="term-input-row">
+      <span class="term-prompt">${escapeHtml(consolePrompt(session))}</span>
+      <input class="term-input" id="termInput" autocomplete="off" spellcheck="false" placeholder="type a command — try: ?" />
+    </div>
+    <div class="console-foot"><span class="console-hint">Type <b>?</b> for supported commands · <b>exit</b> to close</span></div>`;
+  document.getElementById('consoleCloseBtn').onclick = closeConsole;
+  const input = document.getElementById('termInput');
+  const screen = document.getElementById('termScreen');
+  screen.scrollTop = screen.scrollHeight;
+  input.focus();
+  input.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){
+      const raw = input.value;
+      input.value='';
+      const promptShown = consolePrompt(session)+' ';
+      if(raw.trim().toLowerCase()==='exit' && session.mode==='user'){ closeConsole(); return; }
+      const lines = runCommand(partKey, session, raw);
+      session.history.push({cmd:raw, promptShown, lines});
+      persist();
+      renderConsole();
+    }
+  });
+}
+function bootBanner(partKey, session){
+  const idx = state.chosenProducts[partKey];
+  const label = idx!==undefined ? `${PRODUCTS[productsKeyFor(partKey)][idx].brand} ${PRODUCTS[productsKeyFor(partKey)][idx].model}` : getPart(partKey).name;
+  return [
+    {text:session.vendor==='juniper' ? `Amnesiac (ttyu0)` : `${label} Console`},
+    {text:session.vendor==='juniper' ? `${label} JunOS-style simulation — this is a teaching sandbox, not a real device.` : `Simulated IOS-style CLI — teaching sandbox, not a real device.`},
+    {text:''},
+    {hint:true, text:'Type ? for supported commands.'}
+  ];
+}
+function fmtStatus(up){ return up ? 'up' : 'down'; }
+function runCommand(partKey, session, raw){
+  const cmd = raw.trim();
+  if(cmd==='') return [];
+  if(cmd==='?' || cmd.toLowerCase()==='help') return helpText(session);
+  return session.vendor==='juniper' ? execJuniper(partKey, session, cmd) : execCisco(partKey, session, cmd);
+}
+function helpText(session){
+  if(session.vendor==='juniper'){
+    return [
+      {hint:true,text:'show version | show interfaces terse | show configuration'},
+      {hint:true,text:'configure  → enter config mode'},
+      {hint:true,text:'set interfaces <name> unit 0 family inet address <ip>/<len>'},
+      {hint:true,text:'delete interfaces <name> disable   (enables the port)'},
+      {hint:true,text:'set interfaces <name> disable      (disables the port)'},
+      {hint:true,text:'commit | exit | ping <ip>'}
+    ];
+  }
+  return [
+    {hint:true,text:'show version | show ip interface brief | show running-config | show vlan brief'},
+    {hint:true,text:'enable → configure terminal → interface <name>'},
+    {hint:true,text:'ip address <ip> <mask> | no shutdown | shutdown'},
+    {hint:true,text:'exit | end | write memory | ping <ip>'}
+  ];
+}
+function pingOutput(ip){
+  const lines = [];
+  for(let i=0;i<4;i++) lines.push({text:`64 bytes from ${ip}: icmp_seq=${i+1} ttl=64 time=0.${4+i}${2+i} ms`});
+  lines.push({text:'4 packets transmitted, 4 received, 0% packet loss'});
+  return lines;
+}
+function ifBrief(partKey, session, vendor){
+  const names = deviceInterfaces(partKey, vendor);
+  const lines = [];
+  if(vendor==='juniper'){
+    lines.push({text:'Interface               Admin Link Proto    Local'});
+    names.forEach((name,i)=>{
+      const en = session.enabled[name]!==false;
+      const up = en && interfaceUp(partKey,i);
+      const ip = session.ifs[name]?.ip ? `${session.ifs[name].ip}/${session.ifs[name].len}` : '';
+      lines.push({text:`${name.padEnd(24)}${en?'up   ':'down '}${up?'up  ':'down'} inet     ${ip}`});
+    });
+  } else {
+    lines.push({text:'Interface              IP-Address      OK? Method Status                Protocol'});
+    names.forEach((name,i)=>{
+      const en = session.enabled[name]!==false;
+      const up = en && interfaceUp(partKey,i);
+      const ip = session.ifs[name]?.ip || 'unassigned';
+      lines.push({text:`${name.padEnd(23)}${ip.padEnd(16)}YES manual ${(en?'up':'administratively down').padEnd(22)}${up?'up':'down'}`});
+    });
+  }
+  return lines;
+}
+function execCisco(partKey, session, cmd){
+  const low = cmd.toLowerCase();
+  const s = session;
+  if(low==='show version'){
+    const idx = state.chosenProducts[partKey];
+    const label = idx!==undefined ? `${PRODUCTS[productsKeyFor(partKey)][idx].brand} ${PRODUCTS[productsKeyFor(partKey)][idx].model}` : getPart(partKey).name;
+    return [{text:`${label} — simulated IOS 15.2`},{text:'ROM: Bootstrap program is IOS-XE boot loader (simulated)'},{text:'Uptime: 0 minutes'}];
+  }
+  if(low==='show ip interface brief' || low==='sh ip int br' || low==='show ip int brief') return ifBrief(partKey, session, 'cisco');
+  if(low==='show vlan brief') return [{text:'VLAN Name                             Status    Ports'}, {text:'1    default                          active    ' + deviceInterfaces(partKey,'cisco').join(', ')}];
+  if(low==='show running-config' || low==='sh run'){
+    const lines = [{text:'Building configuration...'},{text:''},{text:`hostname ${s.hostname}`},{text:'!'}];
+    Object.keys(s.ifs).forEach(name=>{
+      lines.push({text:`interface ${name}`});
+      if(s.ifs[name].ip) lines.push({text:` ip address ${s.ifs[name].ip} ${s.ifs[name].mask}`});
+      if(s.enabled[name]===false) lines.push({text:' shutdown'});
+      lines.push({text:'!'});
+    });
+    lines.push({text:'end'});
+    return lines;
+  }
+  if(low==='enable'){ if(s.mode==='user') s.mode='enable'; return []; }
+  if(low==='disable'){ s.mode='user'; return []; }
+  if(low==='configure terminal' || low==='conf t'){
+    if(s.mode==='user') return [{err:true,text:'% Not enough permissions — try "enable" first.'}];
+    s.mode='config'; return [{text:'Enter configuration commands, one per line.  End with CNTL/Z.'}];
+  }
+  if(low.startsWith('interface ') || low.startsWith('int ')){
+    if(s.mode!=='config') return [{err:true,text:'% Invalid input detected.'}];
+    const raw2 = cmd.split(/\s+/).slice(1).join('');
+    const names = deviceInterfaces(partKey,'cisco');
+    const match = names.find(n=>n.toLowerCase().replace('gigabitethernet','gi')===raw2.toLowerCase() || n.toLowerCase()===raw2.toLowerCase());
+    if(!match) return [{err:true,text:`% Invalid interface — try one of: ${names.join(', ')}`}];
+    s.currentIf = match; s.mode='config-if';
+    if(!s.ifs[match]) s.ifs[match]={ip:null,mask:null};
+    return [];
+  }
+  if(low.startsWith('ip address ')){
+    if(s.mode!=='config-if') return [{err:true,text:'% Invalid input detected.'}];
+    const parts = cmd.split(/\s+/);
+    s.ifs[s.currentIf] = {ip:parts[2], mask:parts[3]};
+    return [];
+  }
+  if(low==='no shutdown'){ if(s.mode!=='config-if') return [{err:true,text:'% Invalid input detected.'}]; s.enabled[s.currentIf]=true; return [{text:`%LINK-3-UPDOWN: Interface ${s.currentIf}, changed state to up`}]; }
+  if(low==='shutdown'){ if(s.mode!=='config-if') return [{err:true,text:'% Invalid input detected.'}]; s.enabled[s.currentIf]=false; return [{text:`%LINK-3-UPDOWN: Interface ${s.currentIf}, changed state to administratively down`}]; }
+  if(low.startsWith('hostname ')){ if(s.mode!=='config') return [{err:true,text:'% Invalid input detected.'}]; s.hostname=cmd.split(/\s+/)[1]; return []; }
+  if(low==='exit'){
+    if(s.mode==='config-if') s.mode='config';
+    else if(s.mode==='config') s.mode='enable';
+    else if(s.mode==='enable') s.mode='user';
+    return [];
+  }
+  if(low==='end'){ s.mode='enable'; return []; }
+  if(low==='write memory' || low==='wr' || low==='copy running-config startup-config'){ return [{text:'Building configuration... [OK]'}]; }
+  if(low.startsWith('ping ')){ return pingOutput(cmd.split(/\s+/)[1]); }
+  return [{err:true,text:'% Invalid input detected at \'^\' marker.'}];
+}
+function execJuniper(partKey, session, cmd){
+  const low = cmd.toLowerCase();
+  const s = session;
+  if(low==='show version'){
+    const idx = state.chosenProducts[partKey];
+    const label = idx!==undefined ? `${PRODUCTS[productsKeyFor(partKey)][idx].brand} ${PRODUCTS[productsKeyFor(partKey)][idx].model}` : getPart(partKey).name;
+    return [{text:`Hostname: ${s.hostname}`},{text:`Model: ${label} (simulated)`},{text:'JUNOS Software Release [simulated-21.4R1]'}];
+  }
+  if(low==='show interfaces terse') return ifBrief(partKey, session, 'juniper');
+  if(low==='show configuration'){
+    const lines=[];
+    Object.keys(s.ifs).forEach(name=>{
+      if(s.ifs[name].ip) lines.push({text:`interfaces {\n    ${name} {\n        unit 0 {\n            family inet {\n                address ${s.ifs[name].ip}/${s.ifs[name].len};\n            }\n        }\n    }\n}`});
+      if(s.enabled[name]===false) lines.push({text:`interfaces { ${name} { disable; } }`});
+    });
+    return lines.length?lines:[{text:'## no configuration set yet'}];
+  }
+  if(low==='configure'){ s.mode='config'; return [{text:'Entering configuration mode'},{text:'[edit]'}]; }
+  if(low.startsWith('set interfaces ')){
+    if(s.mode!=='config') return [{err:true,text:'unknown command.'}];
+    const m = cmd.match(/set interfaces (\S+) unit 0 family inet address ([\d.]+)\/(\d+)/i);
+    if(m){ s.ifs[m[1]] = {ip:m[2], len:m[3]}; return []; }
+    const m2 = cmd.match(/set interfaces (\S+) disable/i);
+    if(m2){ s.enabled[m2[1]] = false; return []; }
+    return [{err:true,text:'unknown command.'}];
+  }
+  if(low.startsWith('delete interfaces ')){
+    const m = cmd.match(/delete interfaces (\S+) disable/i);
+    if(m){ s.enabled[m[1]] = true; return []; }
+    return [{err:true,text:'unknown command.'}];
+  }
+  if(low==='commit'){ if(s.mode!=='config') return [{err:true,text:'unknown command.'}]; return [{text:'commit complete'}]; }
+  if(low==='commit and-quit'){ s.mode='user'; return [{text:'commit complete'},{text:'Exiting configuration mode'}]; }
+  if(low==='exit' || low==='exit configuration-mode'){ if(s.mode==='config'){ s.mode='user'; return [{text:'Exiting configuration mode'}]; } return []; }
+  if(low.startsWith('ping ') || low.startsWith('run ping ')){ const ip = cmd.split(/\s+/).pop(); return pingOutput(ip); }
+  return [{err:true,text:'                 ^'},{err:true,text:'unknown command.'}];
+}
+document.getElementById('consoleOverlay').addEventListener('click', (e)=>{ if(e.target.id==='consoleOverlay') closeConsole(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && consolePartKey) closeConsole(); });
 
 /* ---------------- bin ---------------- */
 function renderBin(){
@@ -1276,36 +1678,77 @@ function renderWiring(){
   }));
 }
 
-/* ---------------- cabling ---------------- */
+/* ---------------- cabling: real click-to-patch port matching ---------------- */
 function renderCabling(){
   const show = state.phase==='cabling';
   document.getElementById('cablingSection').hidden = !show;
   if(!show) return;
   const isDc = state.buildType==='dc';
   const el = document.getElementById('cableDiagram');
-  let rows = '';
-  for(let i=1;i<=4;i++){
-    const done = state.cableCount>=i;
-    rows += `<div class="cable-row">
-      <span class="cable-dot-label mono">Panel P${i}</span>
-      <button class="cable-btn ${done?'done':''}" data-cable="${i}">${done?'Connected ✓':'Connect patch cable →'}</button>
-      <span class="cable-dot-label mono">${isDc?'ToR':'Switch'} S${i}</span>
+  const n = cablingPortCount();
+  const links = state.patchLinks;
+  const usedSwitchPorts = new Set(Object.values(links));
+  const doneCount = Object.keys(links).length;
+  const swLabel = isDc ? 'ToR Switch' : 'Switch';
+
+  const panelHtml = Array.from({length:n},(_,i)=>i+1).map(p=>{
+    const connected = links[p]!==undefined;
+    const selected = state.selectedPanelPort===p;
+    return `<button class="patch-port ${connected?'connected':''} ${selected?'selected':''}" data-panel="${p}" title="${connected?'Click to unpatch':'Click to select, then pick a switch port'}">
+      <span class="pp-num">P${p}</span>${connected?`<span class="pp-link">→ S${links[p]}</span>`:''}
+    </button>`;
+  }).join('');
+  const switchHtml = Array.from({length:n},(_,i)=>i+1).map(s=>{
+    const connected = usedSwitchPorts.has(s);
+    const pairedPanel = connected ? Object.keys(links).find(p=>links[p]===String(s)||links[p]===s) : null;
+    return `<button class="patch-port ${connected?'connected':''}" data-switch="${s}" title="${connected?'Click to unpatch':'Click after selecting a panel port'}">
+      <span class="pp-num">S${s}</span>${connected?`<span class="pp-link">→ P${pairedPanel}</span>`:''}
+    </button>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="patch-board">
+      <div class="patch-col">
+        <div class="patch-col-title mono">PATCH PANEL</div>
+        <div class="patch-ports">${panelHtml}</div>
+      </div>
+      <div class="patch-col">
+        <div class="patch-col-title mono">${swLabel.toUpperCase()}</div>
+        <div class="patch-ports">${switchHtml}</div>
+      </div>
+    </div>
+    <div class="patch-status mono">${doneCount}/${n} patched${state.selectedPanelPort?` — P${state.selectedPanelPort} selected, click a free switch port`:''}</div>
+    <div class="cable-row uplink-row">
+      <span class="cable-dot-label mono">${isDc?'ToR Up':'Switch Up'}</span>
+      <button class="cable-btn uplink ${state.uplinkDone?'done':''}" id="uplinkBtn" ${doneCount<n?'disabled':''}>${state.uplinkDone?'Uplink connected ✓':'Connect uplink →'}</button>
+      <span class="cable-dot-label mono">${isDc?'Core LAN':'Router LAN'}</span>
     </div>`;
-  }
-  rows += `<div class="cable-row" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--line)">
-    <span class="cable-dot-label mono">${isDc?'ToR Up':'Switch Up'}</span>
-    <button class="cable-btn uplink ${state.uplinkDone?'done':''}" id="uplinkBtn">${state.uplinkDone?'Uplink connected ✓':'Connect uplink →'}</button>
-    <span class="cable-dot-label mono">${isDc?'Core LAN':'Router LAN'}</span>
-  </div>`;
-  el.innerHTML = rows;
-  el.querySelectorAll('[data-cable]').forEach(b=>{
+
+  el.querySelectorAll('[data-panel]').forEach(b=>{
     b.onclick = ()=>{
-      const n = parseInt(b.getAttribute('data-cable'));
-      if(n===state.cableCount+1){ actWithPulse(b, ()=>{ state.cableCount++; render(); }); }
+      const p = parseInt(b.getAttribute('data-panel'));
+      if(links[p]!==undefined){
+        actWithPulse(b, ()=>{ delete links[p]; state.selectedPanelPort=null; render(); });
+        return;
+      }
+      state.selectedPanelPort = (state.selectedPanelPort===p) ? null : p;
+      renderCabling();
+    };
+  });
+  el.querySelectorAll('[data-switch]').forEach(b=>{
+    b.onclick = ()=>{
+      const s = parseInt(b.getAttribute('data-switch'));
+      if(usedSwitchPorts.has(s)){
+        const pairedPanel = Object.keys(links).find(p=>links[p]===s);
+        actWithPulse(b, ()=>{ if(pairedPanel!==undefined) delete links[pairedPanel]; state.selectedPanelPort=null; render(); });
+        return;
+      }
+      if(state.selectedPanelPort==null) return;
+      actWithPulse(b, ()=>{ links[state.selectedPanelPort]=s; state.selectedPanelPort=null; render(); });
     };
   });
   const uplinkBtn = document.getElementById('uplinkBtn');
-  if(uplinkBtn) uplinkBtn.onclick = ()=>{ if(state.cableCount>=4){ actWithPulse(uplinkBtn, ()=>{ state.uplinkDone=true; render(); }); } };
+  if(uplinkBtn) uplinkBtn.onclick = ()=>{ if(doneCount>=n){ actWithPulse(uplinkBtn, ()=>{ state.uplinkDone=true; render(); }); } };
 }
 
 /* ---------------- boot sequence ---------------- */
