@@ -81,10 +81,15 @@
       ]
     },
     "patchLinks": {
-      "1": 2
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6
     },
     "selectedPanelPort": null,
-    "uplinkDone": false,
+    "uplinkDone": true,
     "bootNext": 0,
     "chosenProducts": {
       "patchpanel": 0,
