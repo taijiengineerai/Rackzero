@@ -57,7 +57,7 @@
       null,
       null,
       "patchpanel",
-      null
+      "cablebar"
     ],
     "binKeys": [
       "patchpanel",
@@ -75,7 +75,8 @@
     "uplinkDone": false,
     "bootNext": 0,
     "chosenProducts": {
-      "patchpanel": 0
+      "patchpanel": 0,
+      "cablebar": 0
     },
     "healthChecks": {},
     "consoleSessions": {},
