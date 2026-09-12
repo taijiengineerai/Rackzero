@@ -951,7 +951,16 @@ function renderProfileBar(){
     const v = e.target.value.trim() || 'Untitled Build';
     profiles[activeId].name = v; persist(); renderProfileBar();
   });
-  document.getElementById('switchBtn').onclick = ()=>{ dropdownOpen = !dropdownOpen; renderProfileBar(); };
+  document.getElementById('switchBtn').onclick = async ()=>{
+    dropdownOpen = !dropdownOpen;
+    renderProfileBar();
+    if(dropdownOpen && ghToken && ghStatus!=='connecting'){
+      const btn = document.getElementById('switchBtn');
+      if(btn) btn.textContent = 'Checking GitHub…';
+      try{ await ghPullSavesIntoLocal(); }catch(e){ /* silent — local list still shows */ }
+      renderProfileBar();
+    }
+  };
   document.getElementById('resetBarBtn').onclick = ()=>{
     if(!resetArmed){
       resetArmed = true; renderProfileBar();
