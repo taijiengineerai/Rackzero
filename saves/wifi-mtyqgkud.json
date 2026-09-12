@@ -43,8 +43,8 @@
       null,
       null,
       null,
-      null,
-      null,
+      "server",
+      "server",
       null,
       null,
       null,
@@ -78,7 +78,8 @@
       "patchpanel": 0,
       "cablebar": 0,
       "tor_switch": 0,
-      "core_router": 0
+      "core_router": 0,
+      "server": 0
     },
     "healthChecks": {},
     "consoleSessions": {},
