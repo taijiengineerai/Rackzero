@@ -98,7 +98,13 @@
       "core_router": 0,
       "server": 0
     },
-    "healthChecks": {},
+    "healthChecks": {
+      "links": true,
+      "poe": true,
+      "ups": true,
+      "dhcp": true,
+      "ping": true
+    },
     "consoleSessions": {},
     "furthestPhaseIdx": 11
   }
