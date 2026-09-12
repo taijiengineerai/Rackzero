@@ -1,7 +1,7 @@
 {
   "name": "Wifi",
   "state": {
-    "phase": "wiring",
+    "phase": "cabling",
     "buildType": "dc",
     "rack": {
       "u": 24,
@@ -93,6 +93,6 @@
     },
     "healthChecks": {},
     "consoleSessions": {},
-    "furthestPhaseIdx": 8
+    "furthestPhaseIdx": 9
   }
 }
