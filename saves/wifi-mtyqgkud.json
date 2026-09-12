@@ -1,7 +1,7 @@
 {
   "name": "Wifi",
   "state": {
-    "phase": "bootSequence",
+    "phase": "healthCheck",
     "buildType": "dc",
     "rack": {
       "u": 24,
@@ -90,7 +90,7 @@
     },
     "selectedPanelPort": null,
     "uplinkDone": true,
-    "bootNext": 0,
+    "bootNext": 3,
     "chosenProducts": {
       "patchpanel": 0,
       "cablebar": 0,
@@ -100,6 +100,6 @@
     },
     "healthChecks": {},
     "consoleSessions": {},
-    "furthestPhaseIdx": 10
+    "furthestPhaseIdx": 11
   }
 }
