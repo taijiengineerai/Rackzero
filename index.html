@@ -717,7 +717,15 @@ function ghSlug(name){ return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').repl
 async function ghRequest(path, options){
   options = options || {};
   const headers = Object.assign({'Authorization':'token '+ghToken, 'Accept':'application/vnd.github+json'}, options.headers||{});
-  return fetch(`${GH_API}/repos/${GH_OWNER}/${GH_REPO}/${path}`, Object.assign({}, options, {headers}));
+  const base = `${GH_API}/repos/${GH_OWNER}/${GH_REPO}`;
+  const url = path ? `${base}/${path}` : base;
+  let res;
+  try{
+    res = await fetch(url, Object.assign({}, options, {headers}));
+  }catch(e){
+    throw new Error('Network request to api.github.com failed — check your internet connection, or a browser extension (ad blocker/privacy tool) may be blocking it. ('+(e&&e.message?e.message:'fetch error')+')');
+  }
+  return res;
 }
 function b64encodeUnicode(str){ return btoa(unescape(encodeURIComponent(str))); }
 function b64decodeUnicode(str){ return decodeURIComponent(escape(atob(str.replace(/\n/g,'')))); }
