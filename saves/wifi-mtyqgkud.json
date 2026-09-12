@@ -1,7 +1,7 @@
 {
   "name": "Wifi",
   "state": {
-    "phase": "chooseCircuit",
+    "phase": "healthCheck",
     "buildType": "dc",
     "rack": {
       "u": 24,
