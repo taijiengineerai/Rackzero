@@ -69,7 +69,17 @@
     "selectedBin": null,
     "wireUpsConnected": false,
     "wiredDevices": [],
-    "wiredFeeds": {},
+    "wiredFeeds": {
+      "tor_switch": [
+        "A"
+      ],
+      "core_router": [
+        "A"
+      ],
+      "server": [
+        "A"
+      ]
+    },
     "patchLinks": {},
     "selectedPanelPort": null,
     "uplinkDone": false,
