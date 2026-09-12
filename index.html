@@ -71,6 +71,18 @@
   .profile-del{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; padding:2px 4px; }
   .profile-new{ width:100%; margin-top:4px; }
 
+  /* GitHub-backed save */
+  .gh-panel{ width:100%; margin-top:10px; }
+  .gh-status{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-faint); margin-right:8px; }
+  .gh-status.ok{ color:var(--teal); }
+  .gh-status.err{ color:var(--danger); }
+  .gh-form{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; max-width:520px; }
+  .gh-note{ font-size:11.5px; color:var(--ink-dim); line-height:1.5; margin:0 0 10px; }
+  .gh-note code{ font-family:"IBM Plex Mono",monospace; font-size:11px; background:var(--bg-raised); padding:1px 5px; border-radius:4px; }
+  .gh-note a{ color:var(--teal); }
+  .gh-form-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .gh-form-row .profile-name-input{ flex:1; min-width:180px; max-width:none; }
+
   .resume-note{ font-size:11.5px; color:var(--ink-faint); line-height:1.5; margin:-10px 0 14px; max-width:70ch; }
   .resume-note b{ color:var(--ink-dim); }
 
@@ -691,6 +703,114 @@ function saveProfiles(){
 function getActiveId(){ try{ return localStorage.getItem('rackzero-active'); }catch(e){ return null; } }
 function setActiveId(id){ try{ localStorage.setItem('rackzero-active', id); }catch(e){} }
 function newProfileId(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ---------------- GitHub-backed save ---------------- */
+const GH_OWNER = 'taijiengineerai', GH_REPO = 'Rackzero', GH_API = 'https://api.github.com';
+function getGhToken(){ try{ return localStorage.getItem('rackzero-gh-token')||''; }catch(e){ return ''; } }
+function setGhToken(t){ try{ if(t) localStorage.setItem('rackzero-gh-token', t); else localStorage.removeItem('rackzero-gh-token'); }catch(e){} }
+let ghToken = getGhToken();
+let ghStatus = ghToken ? 'connected' : 'disconnected'; // disconnected | connecting | connected | syncing | error
+let ghStatusMsg = '';
+let ghSyncTimer = null;
+
+function ghSlug(name){ return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'build'; }
+async function ghRequest(path, options){
+  options = options || {};
+  const headers = Object.assign({'Authorization':'token '+ghToken, 'Accept':'application/vnd.github+json'}, options.headers||{});
+  return fetch(`${GH_API}/repos/${GH_OWNER}/${GH_REPO}/${path}`, Object.assign({}, options, {headers}));
+}
+function b64encodeUnicode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decodeUnicode(str){ return decodeURIComponent(escape(atob(str.replace(/\n/g,'')))); }
+
+async function ghVerifyToken(){
+  const res = await ghRequest('');
+  if(res.status===200) return true;
+  if(res.status===404) throw new Error('Token works, but can\'t see this repo — check it\'s scoped to '+GH_OWNER+'/'+GH_REPO);
+  if(res.status===401) throw new Error('Invalid or expired token');
+  throw new Error('GitHub said: HTTP '+res.status);
+}
+async function ghGetFile(path){
+  const res = await ghRequest('contents/'+path);
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error('GitHub read failed (HTTP '+res.status+')');
+  const data = await res.json();
+  return {sha:data.sha, obj: JSON.parse(b64decodeUnicode(data.content))};
+}
+async function ghPutFile(path, obj, sha, message){
+  const body = {message: message||('Update '+path), content: b64encodeUnicode(JSON.stringify(obj,null,2))};
+  if(sha) body.sha = sha;
+  const res = await ghRequest('contents/'+path, {method:'PUT', body:JSON.stringify(body)});
+  if(!res.ok){ const t = await res.text().catch(()=> ''); throw new Error('GitHub save failed (HTTP '+res.status+') '+t.slice(0,120)); }
+  const data = await res.json();
+  return data.content.sha;
+}
+async function ghListSaves(){
+  const res = await ghRequest('contents/saves');
+  if(res.status===404) return [];
+  if(!res.ok) throw new Error('GitHub list failed (HTTP '+res.status+')');
+  const data = await res.json();
+  return data.filter(f=>f.name.endsWith('.json'));
+}
+
+async function ghConnect(token){
+  ghToken = token; ghStatus='connecting'; ghStatusMsg=''; renderProfileBar();
+  try{
+    await ghVerifyToken();
+    setGhToken(token);
+    ghStatus='connected';
+    await ghPullSavesIntoLocal();
+  }catch(e){
+    ghStatus='error'; ghStatusMsg = e.message; ghToken=''; setGhToken('');
+  }
+  renderProfileBar();
+}
+function ghDisconnect(){
+  ghToken=''; setGhToken(''); ghStatus='disconnected'; ghStatusMsg='';
+  renderProfileBar();
+}
+async function ghPullSavesIntoLocal(){
+  const files = await ghListSaves();
+  for(const f of files){
+    const already = Object.values(profiles).find(p=>p.ghPath==='saves/'+f.name);
+    if(already) continue;
+    try{
+      const got = await ghGetFile('saves/'+f.name);
+      if(got){
+        const id = newProfileId();
+        profiles[id] = {name: got.obj.name||f.name.replace('.json',''), state: Object.assign(freshState(), got.obj.state||{}), updatedAt: Date.now(), ghPath:'saves/'+f.name, ghSha: got.sha};
+      }
+    }catch(e){ /* skip file that fails to parse */ }
+  }
+  saveProfiles();
+}
+async function ghCreateProfileSave(name){
+  const path = 'saves/'+ghSlug(name)+'-'+Date.now().toString(36)+'.json';
+  ghStatus='syncing'; renderProfileBar();
+  try{
+    const sha = await ghPutFile(path, {name, state}, null, 'Create build: '+name);
+    profiles[activeId].ghPath = path;
+    profiles[activeId].ghSha = sha;
+    saveProfiles();
+    ghStatus='connected'; ghStatusMsg='';
+  }catch(e){ ghStatus='error'; ghStatusMsg=e.message; }
+  renderProfileBar();
+}
+function ghScheduleSync(){
+  if(!ghToken || ghStatus==='connecting') return;
+  clearTimeout(ghSyncTimer);
+  ghSyncTimer = setTimeout(ghSyncActiveProfile, 2500);
+}
+async function ghSyncActiveProfile(){
+  const p = profiles[activeId];
+  if(!p || !p.ghPath) return;
+  ghStatus='syncing'; renderProfileBar();
+  try{
+    const sha = await ghPutFile(p.ghPath, {name:p.name, state}, p.ghSha, 'Update build: '+p.name);
+    p.ghSha = sha; saveProfiles();
+    ghStatus='connected'; ghStatusMsg='';
+  }catch(e){ ghStatus='error'; ghStatusMsg=e.message; }
+  renderProfileBar();
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function timeAgo(ts){
   const s = Math.floor((Date.now()-ts)/1000);
@@ -749,12 +869,35 @@ function persist(){
   saveProfiles();
 }
 
+let ghFormOpen = false;
+function ghPanelHtml(){
+  const current = profiles[activeId];
+  if(ghStatus==='disconnected'){
+    if(!ghFormOpen){
+      return `<button class="btn btn-choice btn-sm" id="ghOpenFormBtn">☁ Connect GitHub to save builds there</button>`;
+    }
+    return `<div class="gh-form">
+      <p class="gh-note">Paste a <b>fine-grained</b> GitHub personal access token scoped to just <code>${GH_OWNER}/${GH_REPO}</code> with <b>Contents: Read and write</b> permission — nothing else. It's stored only in this browser and sent only to api.github.com.
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create one ↗</a></p>
+      <div class="gh-form-row">
+        <input class="profile-name-input" type="password" id="ghTokenInput" placeholder="github_pat_..." autocomplete="off">
+        <button class="btn btn-primary btn-sm" id="ghConnectBtn">Connect</button>
+        <button class="btn btn-ghost btn-sm" id="ghCancelBtn">Cancel</button>
+      </div>
+    </div>`;
+  }
+  if(ghStatus==='connecting') return `<span class="gh-status">☁ Connecting…</span>`;
+  if(ghStatus==='error') return `<span class="gh-status err">⚠ ${escapeHtml(ghStatusMsg)}</span><button class="btn btn-ghost btn-sm" id="ghRetryBtn">Try again</button>`;
+  if(ghStatus==='syncing') return `<span class="gh-status">☁ Saving to GitHub…</span>`;
+  if(!current.ghPath) return `<span class="gh-status ok">☁ Connected</span><button class="btn btn-choice btn-sm" id="ghCreateBtn">Create GitHub profile for "${escapeHtml(current.name)}"</button><button class="btn btn-ghost btn-sm" id="ghDisconnectBtn">Disconnect</button>`;
+  return `<span class="gh-status ok">☁ Saved to ${GH_OWNER}/${GH_REPO}/${escapeHtml(current.ghPath)}</span><button class="btn btn-ghost btn-sm" id="ghDisconnectBtn">Disconnect</button>`;
+}
 function renderProfileBar(){
   const bar = document.getElementById('profileBar');
   const current = profiles[activeId];
   const rows = Object.entries(profiles).sort((a,b)=>b[1].updatedAt-a[1].updatedAt).map(([id,p])=>`
     <div class="profile-row ${id===activeId?'active':''}">
-      <button class="profile-pick" data-pick="${id}">${escapeHtml(p.name)}</button>
+      <button class="profile-pick" data-pick="${id}">${p.ghPath?'☁ ':''}${escapeHtml(p.name)}</button>
       <span class="profile-meta mono">${timeAgo(p.updatedAt)}</span>
       ${id!==activeId?`<button class="profile-del" data-del="${id}" aria-label="Delete build">✕</button>`:''}
     </div>`).join('');
@@ -765,7 +908,25 @@ function renderProfileBar(){
     <button class="btn btn-ghost btn-sm" id="copyLinkBtn">🔗 Copy resume link</button>
     <span class="save-indicator ${lastSaveOk?'':'warn'}" title="${lastSaveOk?'Saved to this browser — refresh anytime, your build is here':'This browser is blocking saves (private/incognito mode, or storage is full/disabled) — your progress will NOT survive a refresh'}">${lastSaveOk?'Autosaved':'⚠ Not saving!'}</span>
     ${dropdownOpen?`<div class="profile-dropdown">${rows}<button class="btn btn-choice btn-sm profile-new" id="newBuildBtn">+ New build</button></div>`:''}
+    <div class="gh-panel">${ghPanelHtml()}</div>
   `;
+  const ghOpenFormBtn = document.getElementById('ghOpenFormBtn');
+  if(ghOpenFormBtn) ghOpenFormBtn.onclick = ()=>{ ghFormOpen=true; renderProfileBar(); };
+  const ghCancelBtn = document.getElementById('ghCancelBtn');
+  if(ghCancelBtn) ghCancelBtn.onclick = ()=>{ ghFormOpen=false; renderProfileBar(); };
+  const ghConnectBtn = document.getElementById('ghConnectBtn');
+  if(ghConnectBtn) ghConnectBtn.onclick = ()=>{
+    const t = document.getElementById('ghTokenInput').value.trim();
+    if(!t) return;
+    ghFormOpen = false;
+    ghConnect(t);
+  };
+  const ghRetryBtn = document.getElementById('ghRetryBtn');
+  if(ghRetryBtn) ghRetryBtn.onclick = ()=>{ ghStatus='disconnected'; ghFormOpen=true; renderProfileBar(); };
+  const ghCreateBtn = document.getElementById('ghCreateBtn');
+  if(ghCreateBtn) ghCreateBtn.onclick = ()=>{ ghCreateProfileSave(profiles[activeId].name); };
+  const ghDisconnectBtn = document.getElementById('ghDisconnectBtn');
+  if(ghDisconnectBtn) ghDisconnectBtn.onclick = ghDisconnect;
   const copyLinkBtn = document.getElementById('copyLinkBtn');
   copyLinkBtn.onclick = ()=>{
     encodeStateToHash();
@@ -854,6 +1015,7 @@ function deviceIcon(type){
 function render(){
   persist();
   encodeStateToHash();
+  ghScheduleSync();
   document.getElementById('stepPill').textContent = `Step ${stepNumber()} / ${currentPhases().length}`;
   renderProfileBar();
   renderStepTracker();
