@@ -393,7 +393,7 @@
   </header>
 
   <div class="profile-bar" id="profileBar"></div>
-  <p class="resume-note">Your progress is written right into this page's URL as you go — bookmark this exact address, or hit <b>Copy resume link</b>, and opening it again (even in a different browser) picks up right here. That works even if your browser blocks the autosave above.</p>
+  <p class="resume-note">Your progress is written right into this page's URL as you go — bookmark this exact address, or hit <b>Copy build link</b>, and opening it again (even in a different browser) picks up right here. That works even if your browser blocks the autosave above.</p>
   <div class="step-tracker" id="stepTracker"></div>
 
   <section class="guide-box" id="guideBox"></section>
@@ -828,7 +828,7 @@ function timeAgo(ts){
   return `${Math.floor(h/24)}d ago`;
 }
 
-/* ---- URL resume link: the address bar itself is a save file, independent of browser storage ---- */
+/* ---- URL build link: the address bar itself is a save file, independent of browser storage ---- */
 function slimStateForUrl(s){
   const copy = JSON.parse(JSON.stringify(s));
   Object.keys(copy.consoleSessions||{}).forEach(k=>{ if(copy.consoleSessions[k]) copy.consoleSessions[k].history = []; });
@@ -913,7 +913,7 @@ function renderProfileBar(){
     <input class="profile-name-input" id="profileNameInput" value="${escapeHtml(current.name)}" aria-label="Build name">
     <button class="btn btn-ghost btn-sm" id="switchBtn">Switch builds ▾</button>
     <button class="btn btn-ghost btn-sm" id="resetBarBtn">${resetArmed?'Click again to reset':'Reset this build'}</button>
-    <button class="btn btn-ghost btn-sm" id="copyLinkBtn">🔗 Copy resume link</button>
+    <button class="btn btn-ghost btn-sm" id="copyLinkBtn">🔗 Copy build link</button>
     <span class="save-indicator ${lastSaveOk?'':'warn'}" title="${lastSaveOk?'Saved to this browser — refresh anytime, your build is here':'This browser is blocking saves (private/incognito mode, or storage is full/disabled) — your progress will NOT survive a refresh'}">${lastSaveOk?'Autosaved':'⚠ Not saving!'}</span>
     ${dropdownOpen?`<div class="profile-dropdown">${rows}<button class="btn btn-choice btn-sm profile-new" id="newBuildBtn">+ New build</button></div>`:''}
     <div class="gh-panel">${ghPanelHtml()}</div>
@@ -939,12 +939,12 @@ function renderProfileBar(){
   copyLinkBtn.onclick = ()=>{
     encodeStateToHash();
     const url = window.location.href;
-    const done = ()=>{ copyLinkBtn.textContent = '✓ Link copied!'; setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy resume link'; }, 2000); };
+    const done = ()=>{ copyLinkBtn.textContent = '✓ Link copied!'; setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy build link'; }, 2000); };
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(done).catch(()=>{ copyLinkBtn.textContent = 'Select & copy the address bar'; setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy resume link'; }, 2500); });
+      navigator.clipboard.writeText(url).then(done).catch(()=>{ copyLinkBtn.textContent = 'Select & copy the address bar'; setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy build link'; }, 2500); });
     } else {
       copyLinkBtn.textContent = 'Select & copy the address bar';
-      setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy resume link'; }, 2500);
+      setTimeout(()=>{ copyLinkBtn.textContent = '🔗 Copy build link'; }, 2500);
     }
   };
   document.getElementById('profileNameInput').addEventListener('change', (e)=>{
