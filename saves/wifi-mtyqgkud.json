@@ -1,13 +1,19 @@
 {
   "name": "Wifi",
   "state": {
-    "phase": "chooseCircuit",
+    "phase": "placement",
     "buildType": "dc",
     "rack": {
       "u": 24,
       "label": "24U half-rack — smaller deployment"
     },
-    "circuit": null,
+    "circuit": {
+      "amps": 20,
+      "volts": 208,
+      "va": 4160,
+      "cont": 3328,
+      "label": "L6-20 · 20A/208V twist-lock"
+    },
     "ups": null,
     "dcTier": {
       "key": "2",
@@ -18,8 +24,14 @@
       "redundancy": "N+1 components",
       "blurb": "Extra UPS and cooling modules, but still one distribution path — you can lose a component, not the whole path."
     },
-    "pdu": null,
-    "feeds": [],
+    "pdu": {
+      "key": "metered",
+      "name": "Metered PDU",
+      "blurb": "Same fan-out, plus a running total of load — so you see capacity coming instead of guessing."
+    },
+    "feeds": [
+      "A"
+    ],
     "rackU": 24,
     "slots": [
       null,
@@ -44,10 +56,16 @@
       null,
       null,
       null,
-      null,
+      "patchpanel",
       null
     ],
-    "binKeys": [],
+    "binKeys": [
+      "patchpanel",
+      "cablebar",
+      "tor_switch",
+      "core_router",
+      "server"
+    ],
     "selectedBin": null,
     "wireUpsConnected": false,
     "wiredDevices": [],
@@ -56,9 +74,11 @@
     "selectedPanelPort": null,
     "uplinkDone": false,
     "bootNext": 0,
-    "chosenProducts": {},
+    "chosenProducts": {
+      "patchpanel": 0
+    },
     "healthChecks": {},
     "consoleSessions": {},
-    "furthestPhaseIdx": 4
+    "furthestPhaseIdx": 7
   }
 }
