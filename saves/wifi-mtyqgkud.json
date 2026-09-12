@@ -51,7 +51,7 @@
       null,
       null,
       null,
-      null,
+      "core_router",
       null,
       null,
       "tor_switch",
@@ -77,7 +77,8 @@
     "chosenProducts": {
       "patchpanel": 0,
       "cablebar": 0,
-      "tor_switch": 0
+      "tor_switch": 0,
+      "core_router": 0
     },
     "healthChecks": {},
     "consoleSessions": {},
