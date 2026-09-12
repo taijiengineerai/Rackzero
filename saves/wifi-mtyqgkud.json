@@ -1,0 +1,28 @@
+{
+  "name": "Wifi",
+  "state": {
+    "phase": "intro",
+    "buildType": null,
+    "rack": null,
+    "circuit": null,
+    "ups": null,
+    "dcTier": null,
+    "pdu": null,
+    "feeds": [],
+    "rackU": 0,
+    "slots": [],
+    "binKeys": [],
+    "selectedBin": null,
+    "wireUpsConnected": false,
+    "wiredDevices": [],
+    "wiredFeeds": {},
+    "patchLinks": {},
+    "selectedPanelPort": null,
+    "uplinkDone": false,
+    "bootNext": 0,
+    "chosenProducts": {},
+    "healthChecks": {},
+    "consoleSessions": {},
+    "furthestPhaseIdx": 0
+  }
+}
