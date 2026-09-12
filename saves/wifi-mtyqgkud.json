@@ -66,7 +66,7 @@
       "core_router",
       "server"
     ],
-    "selectedBin": null,
+    "selectedBin": "tor_switch",
     "wireUpsConnected": false,
     "wiredDevices": [],
     "wiredFeeds": {},
